@@ -7,6 +7,8 @@
   <maintainer email="antonio@zugaldia.com">Antonio Zugaldia</maintainer>
   <license>MIT</license>
 
+  <depend>continuum_core</depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
