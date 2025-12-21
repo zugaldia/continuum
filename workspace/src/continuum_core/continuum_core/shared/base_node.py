@@ -1,7 +1,8 @@
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 
-from continuum.constants import PARAM_NODE_DESCRIPTION, PARAM_NODE_NAME
+from continuum.constants import PARAM_DEBUG_MODE, PARAM_NODE_DESCRIPTION, PARAM_NODE_NAME
 
 
 class BaseNode(Node):
@@ -9,14 +10,27 @@ class BaseNode(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
-
-        # Declare parameters for user-facing node information
-        self.declare_parameter(PARAM_NODE_NAME, "")
-        self.declare_parameter(PARAM_NODE_DESCRIPTION, "")
-
-        # Register publishers and subscribers
+        self.register_parameters()
         self.register_publishers()
         self.register_subscribers()
+
+    def register_parameters(self) -> None:
+        """Override to register node parameters."""
+        self.declare_parameter(
+            PARAM_NODE_NAME,
+            "",
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_NODE_DESCRIPTION,
+            "",
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_DEBUG_MODE,
+            False,
+            ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)
+        )
 
     def register_publishers(self) -> None:
         """Override to register node publishers."""
@@ -43,3 +57,16 @@ class BaseNode(Node):
                 Parameter(PARAM_NODE_DESCRIPTION, Parameter.Type.STRING, description),
             ]
         )
+
+    def _get_bool_param(self, name: str) -> bool:
+        """Get a boolean parameter value."""
+        return self.get_parameter(name).get_parameter_value().bool_value
+
+    def _get_str_param(self, name: str) -> str:
+        """Get a string parameter value."""
+        return self.get_parameter(name).get_parameter_value().string_value
+
+    @property
+    def debug_mode(self) -> bool:
+        """Get the debug mode setting."""
+        return self._get_bool_param(PARAM_DEBUG_MODE)
