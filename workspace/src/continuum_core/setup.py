@@ -29,6 +29,7 @@ setup(
             'heartbeat_node = continuum_core.health.heartbeat_node:main',
             'echo_node = continuum_core.health.echo_node:main',
             'fake_asr_node = continuum_core.asr.fake_asr_node:main',
+            'faster_whisper_node = continuum_core.asr.faster_whisper_node:main',
         ],
     },
 )
