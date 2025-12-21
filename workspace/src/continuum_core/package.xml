@@ -8,6 +8,7 @@
   <license>MIT</license>
 
   <depend>continuum_interfaces</depend>
+  <depend>diagnostic_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
