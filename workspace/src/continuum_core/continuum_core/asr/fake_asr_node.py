@@ -9,6 +9,7 @@ database). Fakes are the preferred approach for the Continuum project.
 """
 
 from concurrent.futures import Future
+from typing import Any
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -48,7 +49,7 @@ class FakeAsrNode(BaseAsrNode):
             self.manage_queue(sdk_request)
 
 
-def main(args=None):
+def main(args: Any = None) -> None:
     try:
         with rclpy.init(args=args):
             fake_asr_node = FakeAsrNode()

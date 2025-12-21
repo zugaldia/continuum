@@ -9,14 +9,14 @@ from continuum.asr.models import ContinuumAsrResponse, ContinuumAsrRequest
 class FakeAsrClient(ContinuumAsrClient):
     """Fake ASR (Automatic Speech Recognition) client for testing purposes."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the fake ASR client."""
         self._logger = logging.getLogger(__name__)
         self._logger.info("Fake ASR client initialized.")
 
     async def execute_request(self, request: ContinuumAsrRequest) -> ContinuumAsrResponse:
         """Transcribe audio data to text."""
-        self._logger.info(f"Starting transcription for session_id: {request.session_id}")
+        self._logger.info(f"Starting transcription for session_id: {request.session_id}, audio_path: {request.audio_path}")
 
         await asyncio.sleep(5)  # Simulate ASR latency
 
@@ -25,10 +25,13 @@ class FakeAsrClient(ContinuumAsrClient):
             self._logger.error(f"Fake ASR error for session_id: {request.session_id}")
             raise Exception("Fake ASR error")
 
-        response = ContinuumAsrResponse(session_id=request.session_id, transcription="This is a fake transcription.")
+        response = ContinuumAsrResponse(
+            session_id=request.session_id,
+            transcription=f"This is a fake transcription for {request.audio_path}."
+        )
         self._logger.info(f"Transcription completed for session_id: {request.session_id}")
         return response
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shutdown the ASR client and clean up resources."""
         self._logger.info("Fake ASR client shutting down.")
