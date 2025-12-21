@@ -14,7 +14,7 @@ test:
 
 lint:
 	ruff check src/
-	mypy --ignore-missing-imports --explicit-package-bases src/
+	mypy --ignore-missing-imports --explicit-package-bases --exclude '/build/' src/
 
 format:
 	ruff format src/
