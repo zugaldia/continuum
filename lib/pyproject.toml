@@ -2,15 +2,20 @@
 name = "continuum"
 version = "0.1.0"
 description = "Continuum Python SDK"
-authors = [
-    {name = "Antonio Zugaldia"}
-]
+authors = [{name = "Antonio Zugaldia"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12"
+
+# Dependencies are pinned to minor versions (~=X.Y) to only allow patch releases
 dependencies = [
+    "faster-whisper~=1.2",
     "pydantic~=2.12",
+    "typer~=0.20",
 ]
+
+[project.scripts]
+continuum = "continuum.continuum:cli"
 
 [tool.poetry]
 packages = [{include = "continuum", from = "src"}]
