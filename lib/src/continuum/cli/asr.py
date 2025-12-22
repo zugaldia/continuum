@@ -9,8 +9,7 @@ import typer
 from continuum.asr.asr_client import ContinuumAsrClient
 from continuum.asr.fake_asr_client import FakeAsrClient
 from continuum.asr.faster_whisper_client import FasterWhisperClient
-from continuum.asr.models import ContinuumAsrRequest
-from continuum.utils import generate_session_id
+from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
 
 
 class Provider(str, Enum):
@@ -21,8 +20,8 @@ class Provider(str, Enum):
 
 
 def asr_command(
-        audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
         provider: Provider = typer.Option(Provider.FASTER_WHISPER, help="ASR provider to use"),
+        audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
 ) -> None:
     """Transcribe audio file using ASR."""
     if not audio_file.exists():
@@ -40,14 +39,15 @@ def asr_command(
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
-    request = ContinuumAsrRequest(
-        session_id=generate_session_id(),
-        audio_path=str(audio_file.absolute())
-    )
+    request = ContinuumAsrRequest(audio_path=str(audio_file.absolute()))
+
+    def streaming_callback(streaming_response: ContinuumAsrStreamingResponse) -> None:
+        """Callback to display streaming responses."""
+        typer.echo(streaming_response.transcription)
 
     try:
-        response = asyncio.run(client.execute_request(request))
-        typer.echo(f"Transcription: {response.transcription}")
+        response = asyncio.run(client.execute_request(request, streaming_callback=streaming_callback))
+        typer.echo(f"\nFinal response: {response}")
     except Exception as e:
         typer.echo(f"Error during transcription: {e}", err=True)
         raise typer.Exit(code=1)
