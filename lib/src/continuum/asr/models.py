@@ -1,17 +1,10 @@
-from collections import OrderedDict
-
 from pydantic import BaseModel
 
-from continuum.models import ContinuumResponse, ContinuumRequest
+from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStreamingResponse
 
 
 class ContinuumAsrRequest(ContinuumRequest):
-    session_id: str
     audio_path: str
-
-    @classmethod
-    def from_ros(cls, msg: OrderedDict) -> "ContinuumAsrRequest":
-        return cls.model_validate(msg)
 
 
 #
@@ -21,7 +14,12 @@ class ContinuumAsrRequest(ContinuumRequest):
 #
 
 class ContinuumAsrResponse(ContinuumResponse):
-    session_id: str
+    transcription: str
+    language: str = ""  # Empty string indicates language not detected/available
+    language_probability: float = -1.0  # -1.0 indicates probability not available
+
+
+class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
     transcription: str
 
 

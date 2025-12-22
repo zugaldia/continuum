@@ -9,6 +9,10 @@ TOPIC_ECHO_RESPONSE = "topic_echo_response"
 TOPIC_HEARTBEAT = "topic_heartbeat"
 TOPIC_ASR_REQUEST = "topic_asr_request"
 TOPIC_ASR_RESPONSE = "topic_asr_response"
+TOPIC_ASR_STREAMING_RESPONSE = "topic_asr_streaming_response"
+TOPIC_LLM_REQUEST = "topic_llm_request"
+TOPIC_LLM_RESPONSE = "topic_llm_response"
+TOPIC_LLM_STREAMING_RESPONSE = "topic_llm_streaming_response"
 
 # Parameter names
 PARAM_NODE_NAME = "node_name"

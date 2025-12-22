@@ -13,6 +13,10 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/AsrRequest.msg"
   "msg/AsrResponse.msg"
+  "msg/AsrStreamingResponse.msg"
+  "msg/LlmRequest.msg"
+  "msg/LlmResponse.msg"
+  "msg/LlmStreamingResponse.msg"
 )
 
 if(BUILD_TESTING)
