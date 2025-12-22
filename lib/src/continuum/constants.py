@@ -1,18 +1,26 @@
 """Continuum SDK constants."""
 
-SDK_NAME = "Continuum"
+SDK_NAME = "Continuum SDK"
 SDK_VERSION = "0.1.0"
 
+CONTINUUM_NAMESPACE = "continuum"
+PATH_ASR = "asr"
+PATH_LLM = "llm"
+PATH_APP = "app"
+
 # Topic names
-TOPIC_ECHO_REQUEST = "topic_echo_request"
-TOPIC_ECHO_RESPONSE = "topic_echo_response"
-TOPIC_HEARTBEAT = "topic_heartbeat"
-TOPIC_ASR_REQUEST = "topic_asr_request"
-TOPIC_ASR_RESPONSE = "topic_asr_response"
-TOPIC_ASR_STREAMING_RESPONSE = "topic_asr_streaming_response"
-TOPIC_LLM_REQUEST = "topic_llm_request"
-TOPIC_LLM_RESPONSE = "topic_llm_response"
-TOPIC_LLM_STREAMING_RESPONSE = "topic_llm_streaming_response"
+TOPIC_ECHO_REQUEST = "echo_request"
+TOPIC_ECHO_RESPONSE = "echo_response"
+TOPIC_HEARTBEAT = "heartbeat"
+TOPIC_ASR_REQUEST = "asr_request"
+TOPIC_ASR_RESPONSE = "asr_response"
+TOPIC_ASR_STREAMING_RESPONSE = "asr_streaming_response"
+TOPIC_LLM_REQUEST = "llm_request"
+TOPIC_LLM_RESPONSE = "llm_response"
+TOPIC_LLM_STREAMING_RESPONSE = "llm_streaming_response"
+TOPIC_DICTATION_REQUEST = "dictation_request"
+TOPIC_DICTATION_RESPONSE = "dictation_response"
+TOPIC_DICTATION_STREAMING_RESPONSE = "dictation_streaming_response"
 
 # Parameter names
 PARAM_NODE_NAME = "node_name"
