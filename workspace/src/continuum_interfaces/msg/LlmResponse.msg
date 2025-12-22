@@ -4,3 +4,5 @@
 string session_id   # Unique identifier for the LLM session
 string content_text # Response content from the LLM
 string done_reason  # Reason for completion (e.g., "stop", "length")
+int32 error_code    # Error code (0 = no error)
+string error_message # Error message (default: "All systems nominal")

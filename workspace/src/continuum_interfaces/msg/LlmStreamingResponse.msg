@@ -3,3 +3,5 @@
 
 string session_id   # Unique identifier for the LLM session
 string content_text # Incremental response content from the LLM
+int32 error_code    # Error code (0 = no error)
+string error_message # Error message (default: "All systems nominal")

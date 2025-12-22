@@ -3,3 +3,5 @@
 
 string session_id      # Unique identifier for the ASR session
 string transcription   # Incremental transcription from the audio
+int32 error_code       # Error code (0 = no error)
+string error_message   # Error message (default: "All systems nominal")
