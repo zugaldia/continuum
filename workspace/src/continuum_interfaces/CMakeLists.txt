@@ -17,6 +17,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LlmRequest.msg"
   "msg/LlmResponse.msg"
   "msg/LlmStreamingResponse.msg"
+  "msg/DictationRequest.msg"
+  "msg/DictationResponse.msg"
+  "msg/DictationStreamingResponse.msg"
 )
 
 if(BUILD_TESTING)
