@@ -14,13 +14,13 @@ class ContinuumAsrRequest(ContinuumRequest):
 #
 
 class ContinuumAsrResponse(ContinuumResponse):
-    transcription: str
+    transcription: str = ""
     language: str = ""  # Empty string indicates language not detected/available
     language_probability: float = -1.0  # -1.0 indicates probability not available
 
 
 class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
-    transcription: str
+    transcription: str = ""
 
 
 #

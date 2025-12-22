@@ -15,12 +15,12 @@ class ContinuumLlmRequest(ContinuumRequest):
 #
 
 class ContinuumLlmResponse(ContinuumResponse):
-    content_text: str
-    done_reason: str
+    content_text: str = ""
+    done_reason: str = ""
 
 
 class ContinuumLlmStreamingResponse(ContinuumStreamingResponse):
-    content_text: str
+    content_text: str = ""
 
 
 #
