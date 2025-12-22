@@ -39,6 +39,3 @@ foxglove:
 
 launch-desktop:
 	ros2 launch continuum_desktop launch_desktop.py
-
-launch-deck:
-	ros2 launch continuum_deck launch_deck.py
