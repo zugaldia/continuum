@@ -20,6 +20,7 @@ from typing import Callable, Optional
 
 from pydantic import BaseModel, Field
 
+from continuum.constants import ERROR_CODE_SUCCESS
 from continuum.utils import generate_session_id
 
 
@@ -41,10 +42,14 @@ class ContinuumStreamingRequest(BaseModel):
 
 class ContinuumResponse(BaseModel):
     session_id: str = Field(default_factory=generate_session_id)
+    error_code: int = ERROR_CODE_SUCCESS
+    error_message: str = "All systems nominal"
 
 
 class ContinuumStreamingResponse(BaseModel):
     session_id: str = Field(default_factory=generate_session_id)
+    error_code: int = ERROR_CODE_SUCCESS
+    error_message: str = "All systems nominal"
 
 
 class ContinuumClient(ABC):
