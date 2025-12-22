@@ -70,7 +70,6 @@ class BaseLlmNode(QueueNode, ABC):
             self, streaming_response: ContinuumLlmStreamingResponse, sdk_request: ContinuumLlmRequest
     ) -> None:
         """Handle a streaming result from an LLM request."""
-        self.get_logger().info(f"Streaming result for session: {sdk_request.session_id}")
         self.publish_llm_streaming_response(streaming_response)
 
     #

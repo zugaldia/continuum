@@ -70,7 +70,6 @@ class BaseAsrNode(QueueNode, ABC):
             self, streaming_response: ContinuumAsrStreamingResponse, sdk_request: ContinuumAsrRequest
     ) -> None:
         """Handle a streaming result from an ASR request."""
-        self.get_logger().info(f"Streaming result for session: {sdk_request.session_id}")
         self.publish_asr_streaming_response(streaming_response)
 
     #
