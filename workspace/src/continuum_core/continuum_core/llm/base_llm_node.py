@@ -11,6 +11,7 @@ from continuum.constants import (
     TOPIC_LLM_STREAMING_RESPONSE,
     QOS_DEPTH_DEFAULT,
     TOPIC_LLM_REQUEST,
+    ERROR_CODE_UNEXPECTED,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum_core.shared.queue_node import QueueNode
@@ -57,6 +58,11 @@ class BaseLlmNode(QueueNode, ABC):
             self.publish_llm_response(sdk_response)
         except Exception as e:
             self.get_logger().error(f"Error processing request: {e}")
+            self.publish_llm_response(ContinuumLlmResponse(
+                session_id=sdk_request.session_id,
+                error_code=ERROR_CODE_UNEXPECTED,
+                error_message=str(e)
+            ))
         finally:
             self.manage_queue(sdk_request)
 

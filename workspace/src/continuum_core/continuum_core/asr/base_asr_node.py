@@ -12,6 +12,7 @@ from continuum.constants import (
     TOPIC_ASR_STREAMING_RESPONSE,
     QOS_DEPTH_DEFAULT,
     TOPIC_ASR_REQUEST,
+    ERROR_CODE_UNEXPECTED,
 )
 from continuum_core.shared.queue_node import QueueNode
 from continuum_interfaces.msg import AsrResponse, AsrRequest, AsrStreamingResponse
@@ -57,6 +58,11 @@ class BaseAsrNode(QueueNode, ABC):
             self.publish_asr_response(sdk_response)
         except Exception as e:
             self.get_logger().error(f"Error processing request: {e}")
+            self.publish_asr_response(ContinuumAsrResponse(
+                session_id=sdk_request.session_id,
+                error_code=ERROR_CODE_UNEXPECTED,
+                error_message=str(e)
+            ))
         finally:
             self.manage_queue(sdk_request)
 
