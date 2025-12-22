@@ -1,3 +1,13 @@
+"""
+
+This implementation could be compared to a simple action server where streaming == feedback, with additional support
+for queues + asyncio. The reason we didn't go with the action server APIs under the hood was that (1) besides the
+complexities it would add to WebSocket consumers, (2) we eventually want to include the ability for streaming
+*input* (e.g. a mic input), which is something action servers do not support, and we would need to implement manually
+anyway (using a custom pubsub mechanism, for example).
+
+"""
+
 import asyncio
 import collections
 import threading
@@ -18,20 +28,29 @@ MAX_REQUEST_QUEUE_SIZE = 10
 
 class QueueNode(AsyncNode, ABC):
     """Base class for all Continuum nodes that need access to the asyncio loop, with a queueing mechanism."""
+    _client: ContinuumClient
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
         self._request_queue: collections.deque[ContinuumRequest] = collections.deque()
         self._request_queue_lock: threading.Lock = threading.Lock()
         self._current_requests: list[ContinuumRequest] = []
-        self._client: ContinuumClient
 
     @abstractmethod
     def handle_result(self, future: Future[ContinuumResponse], sdk_request: ContinuumRequest) -> None:
+        """Implemented by each subsystem to support their own request-response types."""
+        pass
+
+    @abstractmethod
+    def handle_streaming_result(self, streaming_response: ContinuumResponse, sdk_request: ContinuumRequest) -> None:
+        """Implemented by each subsystem to support their own request-response types."""
         pass
 
     def _queue_request(self, sdk_request: ContinuumRequest) -> None:
-        future = asyncio.run_coroutine_threadsafe(self._client.execute_request(sdk_request), self._core_loop)
+        def callback(streaming_response):
+            return self.handle_streaming_result(streaming_response, sdk_request)
+
+        future = asyncio.run_coroutine_threadsafe(self._client.execute_request(sdk_request, callback), self._core_loop)
         future.add_done_callback(lambda f: self.handle_result(f, sdk_request))
 
     def receive_request(self, sdk_request: ContinuumRequest) -> None:
