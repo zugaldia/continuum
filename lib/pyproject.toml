@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 # Dependencies are pinned to minor versions (~=X.Y) to only allow patch releases
 dependencies = [
     "faster-whisper~=1.2",
+    "ollama~=0.6",
     "pydantic~=2.12",
     "typer~=0.20",
 ]
