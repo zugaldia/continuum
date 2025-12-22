@@ -21,3 +21,7 @@ PARAM_DEBUG_MODE = "debug_mode"
 
 # QoS settings
 QOS_DEPTH_DEFAULT = 10
+
+# Error codes
+ERROR_CODE_SUCCESS = 0
+ERROR_CODE_UNEXPECTED = 1
