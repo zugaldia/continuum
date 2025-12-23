@@ -1,7 +1,6 @@
 """ASR command implementation."""
 
 import asyncio
-from enum import Enum
 from pathlib import Path
 
 import typer
@@ -10,17 +9,11 @@ from continuum.asr.asr_client import ContinuumAsrClient
 from continuum.asr.fake_asr_client import FakeAsrClient
 from continuum.asr.faster_whisper_client import FasterWhisperClient
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
-
-
-class Provider(str, Enum):
-    """Available ASR providers."""
-
-    FAKE = "fake"
-    FASTER_WHISPER = "faster-whisper"
+from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTER_WHISPER
 
 
 def asr_command(
-        provider: Provider = typer.Option(Provider.FASTER_WHISPER, help="ASR provider to use"),
+        provider: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR provider to use"),
         audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
 ) -> None:
     """Transcribe audio file using ASR."""
@@ -28,12 +21,12 @@ def asr_command(
         typer.echo(f"Error: Audio file not found: {audio_file}", err=True)
         raise typer.Exit(code=1)
 
-    typer.echo(f"Transcribing {audio_file} using {provider.value} provider...")
+    typer.echo(f"Transcribing {audio_file} using {provider} provider...")
 
     client: ContinuumAsrClient
-    if provider == Provider.FAKE:
+    if provider == NODE_ASR_FAKE:
         client = FakeAsrClient()
-    elif provider == Provider.FASTER_WHISPER:
+    elif provider == NODE_ASR_FASTER_WHISPER:
         client = FasterWhisperClient()
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)

@@ -1,34 +1,27 @@
 """LLM command implementation."""
 
 import asyncio
-from enum import Enum
 
 import typer
 
+from continuum.constants import NODE_LLM_FAKE, NODE_LLM_OLLAMA
 from continuum.llm.fake_llm_client import FakeLlmClient
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse
 from continuum.llm.ollama_llm_client import OllamaLlmClient
 
 
-class Provider(str, Enum):
-    """Available LLM providers."""
-
-    FAKE = "fake"
-    OLLAMA = "ollama"
-
-
 def llm_command(
-        provider: Provider = typer.Option(Provider.OLLAMA, help="LLM provider to use"),
+        provider: str = typer.Option(NODE_LLM_OLLAMA, help="LLM provider to use"),
         message: str = typer.Argument(..., help="Message to send to the LLM"),
 ) -> None:
     """Send message to LLM for completion."""
-    typer.echo(f"Sending message to {provider.value} provider...")
+    typer.echo(f"Sending message to {provider} provider...")
 
     client: ContinuumLlmClient
-    if provider == Provider.FAKE:
+    if provider == NODE_LLM_FAKE:
         client = FakeLlmClient()
-    elif provider == Provider.OLLAMA:
+    elif provider == NODE_LLM_OLLAMA:
         client = OllamaLlmClient()
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
