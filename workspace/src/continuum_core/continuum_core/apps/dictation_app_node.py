@@ -20,12 +20,23 @@ from continuum.apps.models import (
     DICTATION_STATUS_COMPLETED,
 )
 from continuum.constants import (
+    CONTINUUM_NAMESPACE,
+    ERROR_CODE_SUCCESS,
+    ERROR_CODE_UNEXPECTED,
+    NODE_ASR_FASTER_WHISPER,
+    NODE_LLM_OLLAMA,
+    PATH_ASR,
+    PATH_LLM,
+    QOS_DEPTH_DEFAULT,
+    TOPIC_ASR_REQUEST,
+    TOPIC_ASR_RESPONSE,
+    TOPIC_ASR_STREAMING_RESPONSE,
+    TOPIC_DICTATION_REQUEST,
     TOPIC_DICTATION_RESPONSE,
     TOPIC_DICTATION_STREAMING_RESPONSE,
-    QOS_DEPTH_DEFAULT,
-    TOPIC_DICTATION_REQUEST,
-    ERROR_CODE_UNEXPECTED, CONTINUUM_NAMESPACE, TOPIC_ASR_REQUEST, TOPIC_LLM_REQUEST, TOPIC_ASR_RESPONSE,
-    TOPIC_ASR_STREAMING_RESPONSE, TOPIC_LLM_RESPONSE, TOPIC_LLM_STREAMING_RESPONSE, PATH_ASR, PATH_LLM,
+    TOPIC_LLM_REQUEST,
+    TOPIC_LLM_RESPONSE,
+    TOPIC_LLM_STREAMING_RESPONSE,
 )
 from continuum.models import ContinuumClient
 from continuum_core.apps.base_app_node import BaseAppNode
@@ -65,11 +76,11 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         # Ability to issue ASR requests
-        topic1 = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/faster_whisper/{TOPIC_ASR_REQUEST}"
+        topic1 = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_REQUEST}"
         self._asr_publisher = self.create_publisher(AsrRequest, topic1, QOS_DEPTH_DEFAULT)
 
         # Ability to issue LLM requests
-        topic2 = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/ollama/{TOPIC_LLM_REQUEST}"
+        topic2 = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_REQUEST}"
         self._llm_publisher = self.create_publisher(LlmRequest, topic2, QOS_DEPTH_DEFAULT)
 
     def register_subscribers(self) -> None:
@@ -77,19 +88,19 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         self.create_subscription(DictationRequest, TOPIC_DICTATION_REQUEST, self._listener_callback, QOS_DEPTH_DEFAULT)
 
         # Listen to ASR responses
-        topic_asr_response = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/faster_whisper/{TOPIC_ASR_RESPONSE}"
+        topic_asr_response = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_RESPONSE}"
         self.create_subscription(AsrResponse, topic_asr_response, self._on_asr_response, QOS_DEPTH_DEFAULT)
 
         # Listen to ASR updates
-        topic_asr_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/faster_whisper/{TOPIC_ASR_STREAMING_RESPONSE}"
+        topic_asr_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_STREAMING_RESPONSE}"
         self.create_subscription(AsrStreamingResponse, topic_asr_updates, self._on_asr_updates, QOS_DEPTH_DEFAULT)
 
         # Listen to LLM responses
-        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/ollama/{TOPIC_LLM_RESPONSE}"
+        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_RESPONSE}"
         self.create_subscription(LlmResponse, topic_llm_response, self._on_llm_response, QOS_DEPTH_DEFAULT)
 
         # Listen to LLM updates
-        topic_llm_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/ollama/{TOPIC_LLM_STREAMING_RESPONSE}"
+        topic_llm_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_STREAMING_RESPONSE}"
         self.create_subscription(LlmStreamingResponse, topic_llm_updates, self._on_llm_updates, QOS_DEPTH_DEFAULT)
 
     def _listener_callback(self, msg: DictationRequest) -> None:
@@ -102,13 +113,27 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
             self, request: ContinuumDictationRequest, streaming_callback: Optional[
                 Callable[[ContinuumDictationStreamingResponse], None]] = None) -> ContinuumDictationResponse:
         self._logger.info(f"Starting dictation request for session_id: {request.session_id}")
+        self.add_active_session(request.session_id)
         asr_request = AsrRequest(session_id=request.session_id, audio_path=request.audio_path)
         self._asr_publisher.publish(asr_request)
         return ContinuumDictationResponse(session_id=request.session_id, status=DICTATION_STATUS_QUEUED)
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
         """Handle incoming ASR responses."""
-        self.get_logger().info(f"ASR response received: {msg}")
+        # Only process responses for sessions we initiated
+        if not self.has_active_session(msg.session_id):
+            return
+
+        # Check if the ASR response contains an error
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"ASR error received: {msg.error_message}")
+            self.publish_app_response(ContinuumDictationResponse(
+                session_id=msg.session_id,
+                error_code=msg.error_code,
+                error_message=msg.error_message,
+            ))
+            self.remove_active_session(msg.session_id)
+            return
 
         # Not only this provides an intermediate result to the consumer to show actual progress to the user,
         # if the LLM request fails for some reason, this text could be used as fallback.
@@ -122,16 +147,39 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
 
     def _on_asr_updates(self, msg: AsrStreamingResponse) -> None:
         """Handle incoming ASR streaming responses."""
+        # Only process updates for sessions we initiated
+        if not self.has_active_session(msg.session_id):
+            return
         self.publish_app_streaming_response(ContinuumDictationStreamingResponse(session_id=msg.session_id))
 
     def _on_llm_response(self, msg: LlmResponse) -> None:
         """Handle incoming LLM responses."""
         self.get_logger().info(f"LLM response received: {msg}")
-        self.publish_app_response(ContinuumDictationResponse(
-            session_id=msg.session_id, content_text=msg.content_text, status=DICTATION_STATUS_COMPLETED))
+
+        # Only process responses for sessions we initiated
+        if not self.has_active_session(msg.session_id):
+            return
+
+        # Check if the LLM response contains an error
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"LLM error received: {msg.error_message}")
+            self.publish_app_response(ContinuumDictationResponse(
+                session_id=msg.session_id,
+                error_code=msg.error_code,
+                error_message=msg.error_message,
+            ))
+        else:
+            self.publish_app_response(ContinuumDictationResponse(
+                session_id=msg.session_id, content_text=msg.content_text, status=DICTATION_STATUS_COMPLETED))
+
+        # Remove the session from tracking as the flow is complete
+        self.remove_active_session(msg.session_id)
 
     def _on_llm_updates(self, msg: LlmStreamingResponse) -> None:
         """Handle incoming LLM streaming responses."""
+        # Only process updates for sessions we initiated
+        if not self.has_active_session(msg.session_id):
+            return
         self.publish_app_streaming_response(ContinuumDictationStreamingResponse(session_id=msg.session_id))
 
     #
