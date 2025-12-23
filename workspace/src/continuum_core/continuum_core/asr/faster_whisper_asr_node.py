@@ -3,7 +3,7 @@ from typing import Any
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from continuum.asr.faster_whisper_client import FasterWhisperClient
+from continuum.asr import FasterWhisperAsrClient
 from continuum.asr.models import FasterWhisperOptions
 from continuum_core.asr.base_asr_node import BaseAsrNode
 
@@ -12,7 +12,7 @@ class FasterWhisperAsrNode(BaseAsrNode):
     def __init__(self) -> None:
         super().__init__("faster_whisper_asr_node")
         self.set_node_info(name="Faster Whisper ASR Node", description="Fast inference engine for Whisper")
-        self._client = FasterWhisperClient(options=FasterWhisperOptions())
+        self._client = FasterWhisperAsrClient(options=FasterWhisperOptions())
         self.get_logger().info("Faster Whisper ASR node initialized.")
 
     def on_shutdown(self) -> None:

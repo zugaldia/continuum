@@ -13,7 +13,7 @@ from typing import Any
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from continuum.asr.fake_asr_client import FakeAsrClient
+from continuum.asr import FakeAsrClient
 from continuum_core.asr.base_asr_node import BaseAsrNode
 
 
