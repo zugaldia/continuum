@@ -12,6 +12,7 @@ dependencies = [
     "faster-whisper~=1.2",
     "ollama~=0.6",
     "pydantic~=2.12",
+    "roslibpy~=2.0",
     "typer~=0.20",
 ]
 
