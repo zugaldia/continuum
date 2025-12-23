@@ -4,11 +4,13 @@ import asyncio
 
 import typer
 
-from continuum.constants import NODE_LLM_FAKE, NODE_LLM_OLLAMA
+from continuum.constants import NODE_LLM_FAKE, NODE_LLM_OLLAMA, NODE_LLM_OPENAI, NODE_LLM_GOOGLE
 from continuum.llm.fake_llm_client import FakeLlmClient
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse
 from continuum.llm.ollama_llm_client import OllamaLlmClient
+from continuum.llm.openai_llm_client import OpenAILlmClient
+from continuum.llm.google_llm_client import GoogleLlmClient
 
 
 def llm_command(
@@ -23,6 +25,10 @@ def llm_command(
         client = FakeLlmClient()
     elif provider == NODE_LLM_OLLAMA:
         client = OllamaLlmClient()
+    elif provider == NODE_LLM_OPENAI:
+        client = OpenAILlmClient()
+    elif provider == NODE_LLM_GOOGLE:
+        client = GoogleLlmClient()
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)

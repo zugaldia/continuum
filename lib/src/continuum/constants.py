@@ -13,6 +13,8 @@ NODE_ASR_FAKE = "fake"
 NODE_ASR_FASTER_WHISPER = "faster_whisper"
 NODE_LLM_FAKE = "fake"
 NODE_LLM_OLLAMA = "ollama"
+NODE_LLM_OPENAI = "openai"
+NODE_LLM_GOOGLE = "google"
 NODE_APP_DICTATION = "dictation"
 
 # Topic names

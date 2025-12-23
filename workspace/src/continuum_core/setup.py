@@ -35,6 +35,8 @@ setup(
             # LLM nodes
             "fake_llm_node = continuum_core.llm.fake_llm_node:main",
             "ollama_llm_node = continuum_core.llm.ollama_llm_node:main",
+            "openai_llm_node = continuum_core.llm.openai_llm_node:main",
+            "google_llm_node = continuum_core.llm.google_llm_node:main",
             # App nodes
             "dictation_app_node = continuum_core.apps.dictation_app_node:main",
         ],
