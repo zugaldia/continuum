@@ -1,4 +1,4 @@
-.PHONY: deps clean build-all test lint format kill-zombies websocket foxglove launch-desktop launch-deck
+.PHONY: deps clean build-all test lint format kill-zombies websocket foxglove launch-desktop launch-desktop-with-bridge launch-desktop-with-foxglove launch-desktop-with-fakes
 
 deps:
 	rosdep install -i --from-path src --rosdistro kilted -y
@@ -39,3 +39,12 @@ foxglove:
 
 launch-desktop:
 	ros2 launch continuum_desktop launch_desktop.py
+
+launch-desktop-with-bridge:
+	ros2 launch continuum_desktop launch_desktop_with_bridge.py
+
+launch-desktop-with-foxglove:
+	ros2 launch continuum_desktop launch_desktop_with_foxglove.py
+
+launch-desktop-with-fakes:
+	ros2 launch continuum_desktop launch_desktop_with_fakes.py

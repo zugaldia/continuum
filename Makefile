@@ -1,3 +1,6 @@
+# Note: For library-specific commands, see lib/Makefile
+# For workspace-specific commands, see workspace/Makefile
+
 .PHONY: install-lib uninstall-lib lint format
 
 install-lib:
