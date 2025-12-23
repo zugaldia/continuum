@@ -15,8 +15,7 @@ in the ASR models.
 """
 
 from abc import abstractmethod, ABC
-from collections import OrderedDict
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +27,7 @@ class ContinuumRequest(BaseModel):
     session_id: str = Field(default_factory=generate_session_id)
 
     @classmethod
-    def from_ros(cls, msg: OrderedDict) -> "ContinuumRequest":
+    def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumRequest":
         return cls.model_validate(msg)
 
 
@@ -36,7 +35,7 @@ class ContinuumStreamingRequest(BaseModel):
     session_id: str = Field(default_factory=generate_session_id)
 
     @classmethod
-    def from_ros(cls, msg: OrderedDict) -> "ContinuumStreamingRequest":
+    def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumStreamingRequest":
         return cls.model_validate(msg)
 
 
@@ -45,11 +44,19 @@ class ContinuumResponse(BaseModel):
     error_code: int = ERROR_CODE_SUCCESS
     error_message: str = "All systems nominal"
 
+    @classmethod
+    def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumResponse":
+        return cls.model_validate(msg)
+
 
 class ContinuumStreamingResponse(BaseModel):
     session_id: str = Field(default_factory=generate_session_id)
     error_code: int = ERROR_CODE_SUCCESS
     error_message: str = "All systems nominal"
+
+    @classmethod
+    def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumStreamingResponse":
+        return cls.model_validate(msg)
 
 
 class ContinuumClient(ABC):
