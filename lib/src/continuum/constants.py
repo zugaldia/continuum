@@ -8,6 +8,13 @@ PATH_ASR = "asr"
 PATH_LLM = "llm"
 PATH_APP = "app"
 
+# Node names
+NODE_ASR_FAKE = "fake"
+NODE_ASR_FASTER_WHISPER = "faster_whisper"
+NODE_LLM_FAKE = "fake"
+NODE_LLM_OLLAMA = "ollama"
+NODE_APP_DICTATION = "dictation"
+
 # Topic names
 TOPIC_ECHO_REQUEST = "echo_request"
 TOPIC_ECHO_RESPONSE = "echo_response"
