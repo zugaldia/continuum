@@ -13,7 +13,7 @@ from continuum.asr.models import (
 )
 
 
-class FasterWhisperClient(ContinuumAsrClient):
+class FasterWhisperAsrClient(ContinuumAsrClient):
     """Faster Whisper ASR (Automatic Speech Recognition) client."""
 
     def __init__(self, options: FasterWhisperOptions = FasterWhisperOptions()) -> None:
