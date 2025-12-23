@@ -5,6 +5,8 @@ from continuum.constants import (
     NODE_APP_DICTATION,
     NODE_ASR_FASTER_WHISPER,
     NODE_LLM_OLLAMA,
+    NODE_LLM_OPENAI,
+    NODE_LLM_GOOGLE,
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
@@ -42,6 +44,18 @@ def generate_launch_description():
                 executable="ollama_llm_node",
                 name="ollama_llm_node",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}",
+            ),
+            Node(
+                package="continuum_core",
+                executable="openai_llm_node",
+                name="openai_llm_node",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OPENAI}",
+            ),
+            Node(
+                package="continuum_core",
+                executable="google_llm_node",
+                name="google_llm_node",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_GOOGLE}",
             ),
             # App nodes
             Node(
