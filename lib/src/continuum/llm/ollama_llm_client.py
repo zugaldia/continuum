@@ -3,6 +3,7 @@ from typing import Sequence, AsyncIterator, Optional, Callable
 
 from ollama import AsyncClient, Message, ChatResponse
 
+from continuum.constants import ERROR_CODE_UNEXPECTED
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
 
@@ -42,8 +43,16 @@ class OllamaLlmClient(ContinuumLlmClient):
                     ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=result.message.content)
                 )
 
+        if not outputs:
+            self._logger.error(f"No outputs received for session_id: {request.session_id}")
+            return ContinuumLlmResponse(
+                session_id=request.session_id,
+                error_code=ERROR_CODE_UNEXPECTED,
+                error_message="No outputs received from Ollama LLM.",
+            )
+
         content_text = "".join([output.message.content for output in outputs])
-        done_reason = outputs[-1].done_reason if outputs else None
+        done_reason = outputs[-1].done_reason
         response = ContinuumLlmResponse(
             session_id=request.session_id,
             content_text=content_text,
