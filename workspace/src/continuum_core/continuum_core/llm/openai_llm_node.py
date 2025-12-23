@@ -3,7 +3,7 @@ from typing import Any
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from continuum.llm.openai_llm_client import OpenAILlmClient
+from continuum.llm import OpenAILlmClient
 from continuum_core.llm.base_llm_node import BaseLlmNode
 
 

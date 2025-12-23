@@ -9,7 +9,7 @@ from typing import Any
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from continuum.llm.fake_llm_client import FakeLlmClient
+from continuum.llm import FakeLlmClient
 from continuum_core.llm.base_llm_node import BaseLlmNode
 
 
