@@ -20,6 +20,7 @@ from continuum_interfaces.msg import LlmResponse, LlmRequest, LlmStreamingRespon
 
 class BaseLlmNode(QueueNode, ABC):
     """Base class for all LLM nodes in Continuum."""
+
     _llm_publisher: Publisher[LlmResponse]
     _llm_streaming_publisher: Publisher[LlmStreamingResponse]
 
@@ -58,16 +59,16 @@ class BaseLlmNode(QueueNode, ABC):
             self.publish_llm_response(sdk_response)
         except Exception as e:
             self.get_logger().error(f"Error processing request: {e}")
-            self.publish_llm_response(ContinuumLlmResponse(
-                session_id=sdk_request.session_id,
-                error_code=ERROR_CODE_UNEXPECTED,
-                error_message=str(e)
-            ))
+            self.publish_llm_response(
+                ContinuumLlmResponse(
+                    session_id=sdk_request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message=str(e)
+                )
+            )
         finally:
             self.manage_queue(sdk_request)
 
     def handle_streaming_result(
-            self, streaming_response: ContinuumLlmStreamingResponse, sdk_request: ContinuumLlmRequest
+        self, streaming_response: ContinuumLlmStreamingResponse, sdk_request: ContinuumLlmRequest
     ) -> None:
         """Handle a streaming result from an LLM request."""
         self.publish_llm_streaming_response(streaming_response)

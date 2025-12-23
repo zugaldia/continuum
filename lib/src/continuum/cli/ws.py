@@ -58,7 +58,7 @@ def create_response_waiter():
 
 @app.command(name="echo")
 def echo_command(
-        message: str = typer.Argument(..., help="Message to echo"),
+    message: str = typer.Argument(..., help="Message to echo"),
 ) -> None:
     """Send an echo request and wait for the response."""
     typer.echo(f"Sending echo request: {message}")
@@ -87,8 +87,8 @@ def echo_command(
 
 @app.command(name="asr")
 def asr_command(
-        node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
-        audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
+    audio_path: str = typer.Argument(..., help="Path to the audio file"),
 ) -> None:
     """Send an ASR request and wait for the response."""
     session_id = generate_session_id()
@@ -127,8 +127,8 @@ def asr_command(
 
 @app.command(name="llm")
 def llm_command(
-        node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
-        message: str = typer.Argument(..., help="Message to send to the LLM"),
+    node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
+    message: str = typer.Argument(..., help="Message to send to the LLM"),
 ) -> None:
     """Send an LLM request and wait for the response."""
     session_id = generate_session_id()
@@ -168,9 +168,9 @@ def llm_command(
 
 @app.command(name="dictation")
 def dictation_command(
-        asr_node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
-        llm_node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
-        audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    asr_node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
+    llm_node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
+    audio_path: str = typer.Argument(..., help="Path to the audio file"),
 ) -> None:
     """Send a dictation request and wait for the response."""
     session_id = generate_session_id()
@@ -202,10 +202,7 @@ def dictation_command(
                 client.subscribe_dictation_streaming_response(on_dictation_streaming_response)
                 client.subscribe_dictation_response(on_dictation_response)
                 request = ContinuumDictationRequest(
-                    session_id=session_id,
-                    asr_node=asr_node_name,
-                    llm_node=llm_node_name,
-                    audio_path=audio_path
+                    session_id=session_id, asr_node=asr_node_name, llm_node=llm_node_name, audio_path=audio_path
                 )
                 client.publish_dictation_request(request)
                 await asyncio.wait_for(response_received.wait(), timeout=60.0)

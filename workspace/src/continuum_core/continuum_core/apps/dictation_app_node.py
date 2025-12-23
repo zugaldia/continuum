@@ -16,7 +16,9 @@ from rosidl_runtime_py import set_message_fields, message_to_ordereddict
 from continuum.apps.models import (
     ContinuumDictationRequest,
     ContinuumDictationResponse,
-    ContinuumDictationStreamingResponse, DICTATION_STATUS_QUEUED, DICTATION_STATUS_TRANSCRIBED,
+    ContinuumDictationStreamingResponse,
+    DICTATION_STATUS_QUEUED,
+    DICTATION_STATUS_TRANSCRIBED,
     DICTATION_STATUS_COMPLETED,
 )
 from continuum.constants import (
@@ -43,7 +45,12 @@ from continuum_core.apps.base_app_node import BaseAppNode
 from continuum_interfaces.msg import (
     DictationResponse,
     DictationRequest,
-    DictationStreamingResponse, AsrRequest, LlmRequest, AsrResponse, AsrStreamingResponse, LlmResponse,
+    DictationStreamingResponse,
+    AsrRequest,
+    LlmRequest,
+    AsrResponse,
+    AsrStreamingResponse,
+    LlmResponse,
     LlmStreamingResponse,
 )
 
@@ -92,7 +99,9 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         self.create_subscription(AsrResponse, topic_asr_response, self._on_asr_response, QOS_DEPTH_DEFAULT)
 
         # Listen to ASR updates
-        topic_asr_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_STREAMING_RESPONSE}"
+        topic_asr_updates = (
+            f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_STREAMING_RESPONSE}"
+        )
         self.create_subscription(AsrStreamingResponse, topic_asr_updates, self._on_asr_updates, QOS_DEPTH_DEFAULT)
 
         # Listen to LLM responses
@@ -110,8 +119,10 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         self.receive_request(sdk_request)
 
     async def execute_request(
-            self, request: ContinuumDictationRequest, streaming_callback: Optional[
-                Callable[[ContinuumDictationStreamingResponse], None]] = None) -> ContinuumDictationResponse:
+        self,
+        request: ContinuumDictationRequest,
+        streaming_callback: Optional[Callable[[ContinuumDictationStreamingResponse], None]] = None,
+    ) -> ContinuumDictationResponse:
         self._logger.info(f"Starting dictation request for session_id: {request.session_id}")
         self.add_active_session(request.session_id)
         asr_request = AsrRequest(session_id=request.session_id, audio_path=request.audio_path)
@@ -127,18 +138,23 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         # Check if the ASR response contains an error
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"ASR error received: {msg.error_message}")
-            self.publish_app_response(ContinuumDictationResponse(
-                session_id=msg.session_id,
-                error_code=msg.error_code,
-                error_message=msg.error_message,
-            ))
+            self.publish_app_response(
+                ContinuumDictationResponse(
+                    session_id=msg.session_id,
+                    error_code=msg.error_code,
+                    error_message=msg.error_message,
+                )
+            )
             self.remove_active_session(msg.session_id)
             return
 
         # Not only this provides an intermediate result to the consumer to show actual progress to the user,
         # if the LLM request fails for some reason, this text could be used as fallback.
-        self.publish_app_response(ContinuumDictationResponse(
-            session_id=msg.session_id, content_text=msg.transcription, status=DICTATION_STATUS_TRANSCRIBED))
+        self.publish_app_response(
+            ContinuumDictationResponse(
+                session_id=msg.session_id, content_text=msg.transcription, status=DICTATION_STATUS_TRANSCRIBED
+            )
+        )
 
         # Request final pass by the LLM
         content_text = f"Copyedit the following text: {msg.transcription}"
@@ -163,14 +179,19 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         # Check if the LLM response contains an error
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"LLM error received: {msg.error_message}")
-            self.publish_app_response(ContinuumDictationResponse(
-                session_id=msg.session_id,
-                error_code=msg.error_code,
-                error_message=msg.error_message,
-            ))
+            self.publish_app_response(
+                ContinuumDictationResponse(
+                    session_id=msg.session_id,
+                    error_code=msg.error_code,
+                    error_message=msg.error_message,
+                )
+            )
         else:
-            self.publish_app_response(ContinuumDictationResponse(
-                session_id=msg.session_id, content_text=msg.content_text, status=DICTATION_STATUS_COMPLETED))
+            self.publish_app_response(
+                ContinuumDictationResponse(
+                    session_id=msg.session_id, content_text=msg.content_text, status=DICTATION_STATUS_COMPLETED
+                )
+            )
 
         # Remove the session from tracking as the flow is complete
         self.remove_active_session(msg.session_id)
@@ -204,9 +225,9 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
             self.manage_queue(sdk_request)
 
     def handle_streaming_result(
-            self,
-            streaming_response: ContinuumDictationStreamingResponse,
-            sdk_request: ContinuumDictationRequest,
+        self,
+        streaming_response: ContinuumDictationStreamingResponse,
+        sdk_request: ContinuumDictationRequest,
     ) -> None:
         """Handle a streaming result from a dictation request."""
         self.publish_app_streaming_response(streaming_response)

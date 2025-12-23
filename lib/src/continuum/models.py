@@ -62,9 +62,9 @@ class ContinuumStreamingResponse(BaseModel):
 class ContinuumClient(ABC):
     @abstractmethod
     async def execute_request(
-            self,
-            request: ContinuumRequest,
-            streaming_callback: Optional[Callable[[ContinuumStreamingResponse], None]] = None,
+        self,
+        request: ContinuumRequest,
+        streaming_callback: Optional[Callable[[ContinuumStreamingResponse], None]] = None,
     ) -> ContinuumResponse:
         pass
 

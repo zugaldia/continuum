@@ -19,11 +19,10 @@ class FakeLlmClient(ContinuumLlmClient):
         self._logger.info("Fake LLM client initialized.")
 
     async def execute_request(
-            self,
-            request: ContinuumLlmRequest,
-            streaming_callback: Optional[
-                Callable[[ContinuumLlmStreamingResponse], None]] = None) -> ContinuumLlmResponse:
-
+        self,
+        request: ContinuumLlmRequest,
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> ContinuumLlmResponse:
         """Execute LLM request and return response."""
         self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
 
@@ -38,17 +37,10 @@ class FakeLlmClient(ContinuumLlmClient):
             await asyncio.sleep(1.0)  # Simulate token-by-token processing delay
             if streaming_callback:
                 self._logger.debug(f"Intermediate result for session_id: {request.session_id}: {word}")
-                streaming_callback(ContinuumLlmStreamingResponse(
-                    session_id=request.session_id,
-                    content_text=word
-                ))
+                streaming_callback(ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=word))
 
         # Return final response
-        response = ContinuumLlmResponse(
-            session_id=request.session_id,
-            content_text=FAKE_RESPONSE,
-            done_reason="tired"
-        )
+        response = ContinuumLlmResponse(session_id=request.session_id, content_text=FAKE_RESPONSE, done_reason="tired")
 
         self._logger.info(f"LLM completed for session_id: {request.session_id}")
         return response

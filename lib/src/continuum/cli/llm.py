@@ -12,8 +12,8 @@ from continuum.llm.ollama_llm_client import OllamaLlmClient
 
 
 def llm_command(
-        provider: str = typer.Option(NODE_LLM_OLLAMA, help="LLM provider to use"),
-        message: str = typer.Argument(..., help="Message to send to the LLM"),
+    provider: str = typer.Option(NODE_LLM_OLLAMA, help="LLM provider to use"),
+    message: str = typer.Argument(..., help="Message to send to the LLM"),
 ) -> None:
     """Send message to LLM for completion."""
     typer.echo(f"Sending message to {provider} provider...")

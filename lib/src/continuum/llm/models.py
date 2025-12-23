@@ -14,6 +14,7 @@ class ContinuumLlmRequest(ContinuumRequest):
 # ./workspace/src/continuum_interfaces/msg/LlmStreamingResponse.msg
 #
 
+
 class ContinuumLlmResponse(ContinuumResponse):
     content_text: str = ""
     done_reason: str = ""
@@ -27,6 +28,8 @@ class ContinuumLlmStreamingResponse(ContinuumStreamingResponse):
 # Provider-specific models
 #
 
+
 class OllamaOptions(BaseModel):
     """Configuration options for the Ollama client."""
+
     pass

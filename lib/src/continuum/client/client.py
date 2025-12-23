@@ -53,12 +53,11 @@ from continuum.llm.models import (
 # Protocol for types that can be constructed from ROS messages
 class FromRosProtocol(Protocol):
     @classmethod
-    def from_ros(cls: Type['T'], msg: Dict[str, Any]) -> 'T':
-        ...
+    def from_ros(cls: Type["T"], msg: Dict[str, Any]) -> "T": ...
 
 
 # Type variable for generic subscription callbacks
-T = TypeVar('T', bound=FromRosProtocol)
+T = TypeVar("T", bound=FromRosProtocol)
 
 
 class ContinuumException(Exception):
@@ -138,10 +137,7 @@ class ContinuumClient:
             loop.call_soon_threadsafe(future.set_result, topics)
 
         def on_error(error):
-            loop.call_soon_threadsafe(
-                future.set_exception,
-                ContinuumException(f"Failed to get topics: {error}")
-            )
+            loop.call_soon_threadsafe(future.set_exception, ContinuumException(f"Failed to get topics: {error}"))
 
         self._ros.get_topics(on_topics, on_error)
         return await future
@@ -161,10 +157,7 @@ class ContinuumClient:
             loop.call_soon_threadsafe(future.set_result, params)
 
         def on_error(error):
-            loop.call_soon_threadsafe(
-                future.set_exception,
-                ContinuumException(f"Failed to get parameters: {error}")
-            )
+            loop.call_soon_threadsafe(future.set_exception, ContinuumException(f"Failed to get parameters: {error}"))
 
         self._ros.get_params(on_params, on_error)
         return await future
@@ -173,9 +166,7 @@ class ContinuumClient:
     # Subscribers
     #
 
-    def _subscribe_topic(
-            self, name: str, message_type: str, callback: Callable[[Dict[str, Any]], None]
-    ) -> None:
+    def _subscribe_topic(self, name: str, message_type: str, callback: Callable[[Dict[str, Any]], None]) -> None:
         """Subscribe to a topic with duplicate subscription prevention."""
         if not self.is_connected:
             self._logger.error("Cannot subscribe: Disconnected.")
@@ -192,7 +183,8 @@ class ContinuumClient:
         return None
 
     def _subscribe_topic_typed(
-            self, name: str, message_type: str, callback: Callable[[T], None], model_class: Type[T]) -> None:
+        self, name: str, message_type: str, callback: Callable[[T], None], model_class: Type[T]
+    ) -> None:
         """Subscribe to a topic with automatic Pydantic model conversion."""
 
         def wrapped_callback(msg: Dict[str, Any]) -> None:
@@ -217,32 +209,28 @@ class ContinuumClient:
         message_type = "std_msgs/String"
         self._subscribe_topic(name, message_type, wrapped_callback)
 
-    def subscribe_asr_response(
-            self, node_name: str, callback: Callable[[ContinuumAsrResponse], None]
-    ) -> None:
+    def subscribe_asr_response(self, node_name: str, callback: Callable[[ContinuumAsrResponse], None]) -> None:
         """Subscribe to the ASR response topic for the specified ASR node."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{node_name}/{TOPIC_ASR_RESPONSE}"
         message_type = "continuum_interfaces/AsrResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumAsrResponse)
 
     def subscribe_asr_streaming_response(
-            self, node_name: str, callback: Callable[[ContinuumAsrStreamingResponse], None]
+        self, node_name: str, callback: Callable[[ContinuumAsrStreamingResponse], None]
     ) -> None:
         """Subscribe to the ASR streaming response topic for the specified ASR node."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{node_name}/{TOPIC_ASR_STREAMING_RESPONSE}"
         message_type = "continuum_interfaces/AsrStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumAsrStreamingResponse)
 
-    def subscribe_llm_response(
-            self, node_name: str, callback: Callable[[ContinuumLlmResponse], None]
-    ) -> None:
+    def subscribe_llm_response(self, node_name: str, callback: Callable[[ContinuumLlmResponse], None]) -> None:
         """Subscribe to the LLM response topic for the specified LLM node."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{node_name}/{TOPIC_LLM_RESPONSE}"
         message_type = "continuum_interfaces/LlmResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumLlmResponse)
 
     def subscribe_llm_streaming_response(
-            self, node_name: str, callback: Callable[[ContinuumLlmStreamingResponse], None]
+        self, node_name: str, callback: Callable[[ContinuumLlmStreamingResponse], None]
     ) -> None:
         """Subscribe to the LLM streaming response topic for the specified LLM node."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{node_name}/{TOPIC_LLM_STREAMING_RESPONSE}"
@@ -256,7 +244,7 @@ class ContinuumClient:
         self._subscribe_topic_typed(name, message_type, callback, ContinuumDictationResponse)
 
     def subscribe_dictation_streaming_response(
-            self, callback: Callable[[ContinuumDictationStreamingResponse], None]
+        self, callback: Callable[[ContinuumDictationStreamingResponse], None]
     ) -> None:
         """Subscribe to the dictation streaming response topic."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{TOPIC_DICTATION_STREAMING_RESPONSE}"

@@ -16,21 +16,9 @@ class BaseNode(Node):
 
     def register_parameters(self) -> None:
         """Override to register node parameters."""
-        self.declare_parameter(
-            PARAM_NODE_NAME,
-            "",
-            ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
-        )
-        self.declare_parameter(
-            PARAM_NODE_DESCRIPTION,
-            "",
-            ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
-        )
-        self.declare_parameter(
-            PARAM_DEBUG_MODE,
-            False,
-            ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)
-        )
+        self.declare_parameter(PARAM_NODE_NAME, "", ParameterDescriptor(type=ParameterType.PARAMETER_STRING))
+        self.declare_parameter(PARAM_NODE_DESCRIPTION, "", ParameterDescriptor(type=ParameterType.PARAMETER_STRING))
+        self.declare_parameter(PARAM_DEBUG_MODE, False, ParameterDescriptor(type=ParameterType.PARAMETER_BOOL))
 
     def register_publishers(self) -> None:
         """Override to register node publishers."""

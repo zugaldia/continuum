@@ -28,6 +28,7 @@ MAX_REQUEST_QUEUE_SIZE = 10
 
 class QueueNode(AsyncNode, ABC):
     """Base class for all Continuum nodes that need access to the asyncio loop, with a queueing mechanism."""
+
     _client: ContinuumClient
 
     def __init__(self, node_name: str):
@@ -59,8 +60,7 @@ class QueueNode(AsyncNode, ABC):
             if len(self._current_requests) < MAX_CONCURRENT_REQUESTS:
                 self._current_requests.append(sdk_request)
                 self.get_logger().info(
-                    f"Processing request immediately. "
-                    f"Active: {len(self._current_requests)}/{MAX_CONCURRENT_REQUESTS}"
+                    f"Processing request immediately. Active: {len(self._current_requests)}/{MAX_CONCURRENT_REQUESTS}"
                 )
                 self._queue_request(sdk_request)
             # Check if we can queue the request
@@ -72,8 +72,7 @@ class QueueNode(AsyncNode, ABC):
             # Queue is full, discard the request
             else:
                 self.get_logger().error(
-                    f"Request queue full ({MAX_REQUEST_QUEUE_SIZE}). "
-                    f"Discarding request: {sdk_request}"
+                    f"Request queue full ({MAX_REQUEST_QUEUE_SIZE}). Discarding request: {sdk_request}"
                 )
 
     def manage_queue(self, sdk_request: ContinuumRequest) -> None:

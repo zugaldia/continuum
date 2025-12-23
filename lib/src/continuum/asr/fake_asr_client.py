@@ -19,11 +19,10 @@ class FakeAsrClient(ContinuumAsrClient):
         self._logger.info("Fake ASR client initialized.")
 
     async def execute_request(
-            self,
-            request: ContinuumAsrRequest,
-            streaming_callback: Optional[
-                Callable[[ContinuumAsrStreamingResponse], None]] = None) -> ContinuumAsrResponse:
-
+        self,
+        request: ContinuumAsrRequest,
+        streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
+    ) -> ContinuumAsrResponse:
         """Transcribe audio data to text."""
         self._logger.info(f"Starting transcription for session_id: {request.session_id}")
 
@@ -38,15 +37,10 @@ class FakeAsrClient(ContinuumAsrClient):
             await asyncio.sleep(1.0)  # Simulate word-by-word processing delay
             if streaming_callback:
                 self._logger.debug(f"Intermediate result for session_id: {request.session_id}: {word}")
-                streaming_callback(ContinuumAsrStreamingResponse(
-                    session_id=request.session_id,
-                    transcription=word
-                ))
+                streaming_callback(ContinuumAsrStreamingResponse(session_id=request.session_id, transcription=word))
 
         # Return final response
-        response = ContinuumAsrResponse(
-            session_id=request.session_id,
-            transcription=FAKE_TRANSCRIPTION)
+        response = ContinuumAsrResponse(session_id=request.session_id, transcription=FAKE_TRANSCRIPTION)
 
         self._logger.info(f"Transcription completed for session_id: {request.session_id}")
         return response

@@ -13,6 +13,7 @@ class ContinuumAsrRequest(ContinuumRequest):
 # ./workspace/src/continuum_interfaces/msg/AsrResponse.msg
 #
 
+
 class ContinuumAsrResponse(ContinuumResponse):
     transcription: str = ""
     language: str = ""  # Empty string indicates language not detected/available
@@ -26,6 +27,7 @@ class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
 #
 # Provider-specific models
 #
+
 
 class FasterWhisperOptions(BaseModel):
     """Configuration options for the Faster Whisper client."""

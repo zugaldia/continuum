@@ -22,6 +22,7 @@ class ContinuumAppResponse(ContinuumResponse):
 # Dictation app
 #
 
+
 class ContinuumDictationRequest(ContinuumAppRequest):
     asr_node: str  # ASR node implementation to use (e.g., "faster_whisper", "fake")
     llm_node: str  # LLM node implementation to use (e.g., "ollama", "claude")

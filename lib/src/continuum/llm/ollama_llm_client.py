@@ -17,11 +17,10 @@ class OllamaLlmClient(ContinuumLlmClient):
         self._logger.info("Ollama LLM client initialized.")
 
     async def execute_request(
-            self,
-            request: ContinuumLlmRequest,
-            streaming_callback: Optional[
-                Callable[[ContinuumLlmStreamingResponse], None]] = None) -> ContinuumLlmResponse:
-
+        self,
+        request: ContinuumLlmRequest,
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
 
@@ -30,7 +29,8 @@ class OllamaLlmClient(ContinuumLlmClient):
         stream: bool = True
         think: bool = False
         results: ChatResponse | AsyncIterator[ChatResponse] = await self._client.chat(
-            model=model, messages=inputs, stream=stream, think=think)
+            model=model, messages=inputs, stream=stream, think=think
+        )
 
         outputs: list[ChatResponse] = []
         async for result in results:
@@ -38,10 +38,9 @@ class OllamaLlmClient(ContinuumLlmClient):
             if result.done:
                 self._logger.info(f"LLM is done: {result}")
             elif streaming_callback:
-                streaming_callback(ContinuumLlmStreamingResponse(
-                    session_id=request.session_id,
-                    content_text=result.message.content
-                ))
+                streaming_callback(
+                    ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=result.message.content)
+                )
 
         content_text = "".join([output.message.content for output in outputs])
         done_reason = outputs[-1].done_reason if outputs else None

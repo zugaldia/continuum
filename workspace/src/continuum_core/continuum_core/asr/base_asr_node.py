@@ -20,6 +20,7 @@ from continuum_interfaces.msg import AsrResponse, AsrRequest, AsrStreamingRespon
 
 class BaseAsrNode(QueueNode, ABC):
     """Base class for all ASR nodes in Continuum."""
+
     _asr_publisher: Publisher[AsrResponse]
     _asr_streaming_publisher: Publisher[AsrStreamingResponse]
 
@@ -58,16 +59,16 @@ class BaseAsrNode(QueueNode, ABC):
             self.publish_asr_response(sdk_response)
         except Exception as e:
             self.get_logger().error(f"Error processing request: {e}")
-            self.publish_asr_response(ContinuumAsrResponse(
-                session_id=sdk_request.session_id,
-                error_code=ERROR_CODE_UNEXPECTED,
-                error_message=str(e)
-            ))
+            self.publish_asr_response(
+                ContinuumAsrResponse(
+                    session_id=sdk_request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message=str(e)
+                )
+            )
         finally:
             self.manage_queue(sdk_request)
 
     def handle_streaming_result(
-            self, streaming_response: ContinuumAsrStreamingResponse, sdk_request: ContinuumAsrRequest
+        self, streaming_response: ContinuumAsrStreamingResponse, sdk_request: ContinuumAsrRequest
     ) -> None:
         """Handle a streaming result from an ASR request."""
         self.publish_asr_streaming_response(streaming_response)

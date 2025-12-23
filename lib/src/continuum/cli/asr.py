@@ -13,8 +13,8 @@ from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTER_WHISPER
 
 
 def asr_command(
-        provider: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR provider to use"),
-        audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
+    provider: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR provider to use"),
+    audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
 ) -> None:
     """Transcribe audio file using ASR."""
     if not audio_file.exists():
