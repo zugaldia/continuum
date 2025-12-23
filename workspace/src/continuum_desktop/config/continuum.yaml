@@ -1,0 +1,7 @@
+# Continuum desktop parameters configuration
+# This file manages the parameters for all nodes in the system
+
+# /** applies to all nodes
+/**:
+  ros__parameters:
+    debug_mode: true

@@ -17,6 +17,10 @@ NODE_LLM_OPENAI = "openai"
 NODE_LLM_GOOGLE = "google"
 NODE_APP_DICTATION = "dictation"
 
+# Profile names
+PROFILE_LOCAL = "local"
+PROFILE_CLOUD = "cloud"
+
 # Topic names
 TOPIC_ECHO_REQUEST = "echo_request"
 TOPIC_ECHO_RESPONSE = "echo_response"
