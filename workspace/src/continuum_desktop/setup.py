@@ -9,7 +9,10 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        ("share/" + package_name, ["launch/launch_desktop.py"]),
+        ("share/" + package_name + "/launch", ["launch/launch_desktop.py"]),
+        ("share/" + package_name + "/launch", ["launch/launch_desktop_with_fakes.py"]),
+        ("share/" + package_name + "/launch", ["launch/launch_desktop_with_bridge.py"]),
+        ("share/" + package_name + "/launch", ["launch/launch_desktop_with_foxglove.py"]),
     ],
     install_requires=["setuptools", "continuum"],
     zip_safe=True,
