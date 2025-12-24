@@ -14,7 +14,7 @@ from continuum.apps.models import (
 )
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrResponse, ContinuumAsrStreamingResponse
 from continuum.client import ContinuumClient
-from continuum.constants import ERROR_CODE_SUCCESS, NODE_ASR_FASTER_WHISPER, NODE_LLM_OLLAMA
+from continuum.constants import ERROR_CODE_SUCCESS, NODE_ASR_FASTERWHISPER, NODE_LLM_OLLAMA
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum.utils import generate_session_id
 
@@ -87,7 +87,7 @@ def echo_command(
 
 @app.command(name="asr")
 def asr_command(
-    node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
+    node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     audio_path: str = typer.Argument(..., help="Path to the audio file"),
 ) -> None:
     """Send an ASR request and wait for the response."""
@@ -168,7 +168,7 @@ def llm_command(
 
 @app.command(name="dictation")
 def dictation_command(
-    asr_node_name: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR node name"),
+    asr_node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     llm_node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
     audio_path: str = typer.Argument(..., help="Path to the audio file"),
 ) -> None:

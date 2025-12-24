@@ -7,11 +7,11 @@ import typer
 
 from continuum.asr import ContinuumAsrClient, FakeAsrClient, FasterWhisperAsrClient, OpenAiAsrClient
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
-from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTER_WHISPER, NODE_ASR_OPENAI
+from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_OPENAI
 
 
 def asr_command(
-    provider: str = typer.Option(NODE_ASR_FASTER_WHISPER, help="ASR provider to use"),
+    provider: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR provider to use"),
     audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
 ) -> None:
     """Transcribe audio file using ASR."""
@@ -24,7 +24,7 @@ def asr_command(
     client: ContinuumAsrClient
     if provider == NODE_ASR_FAKE:
         client = FakeAsrClient()
-    elif provider == NODE_ASR_FASTER_WHISPER:
+    elif provider == NODE_ASR_FASTERWHISPER:
         client = FasterWhisperAsrClient()
     elif provider == NODE_ASR_OPENAI:
         client = OpenAiAsrClient()
