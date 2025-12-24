@@ -9,6 +9,7 @@ from concurrent.futures import Future
 from typing import Any, Optional, Callable
 
 import rclpy
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
 from rclpy.publisher import Publisher
 from rosidl_runtime_py import set_message_fields, message_to_ordereddict
@@ -25,8 +26,10 @@ from continuum.constants import (
     CONTINUUM_NAMESPACE,
     ERROR_CODE_SUCCESS,
     ERROR_CODE_UNEXPECTED,
-    NODE_ASR_FASTER_WHISPER,
-    NODE_LLM_OLLAMA,
+    PARAM_ASR_NODE,
+    PARAM_ASR_NODE_DEFAULT,
+    PARAM_LLM_NODE,
+    PARAM_LLM_NODE_DEFAULT,
     PATH_ASR,
     PATH_LLM,
     QOS_DEPTH_DEFAULT,
@@ -60,6 +63,8 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     _llm_publisher: Publisher[LlmRequest]
     _app_publisher: Publisher[DictationResponse]
     _app_streaming_publisher: Publisher[DictationStreamingResponse]
+    _asr_node: str
+    _llm_node: str
 
     def __init__(self):
         super().__init__("dictation_app_node")
@@ -69,11 +74,25 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         self._client = self
-        self.get_logger().info("Dictation app node initialized.")
+        self.get_logger().info(f"Dictation app node initialized with {self._asr_node}/{self._llm_node}.")
 
     #
     # Base node methods
     #
+
+    def register_parameters(self) -> None:
+        """Register the dictation app parameters."""
+        super().register_parameters()
+        self.declare_parameter(
+            PARAM_ASR_NODE, PARAM_ASR_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_LLM_NODE, PARAM_LLM_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+
+        # Get ASR and LLM node names before registering publishers/subscribers
+        self._asr_node = self._get_str_param(PARAM_ASR_NODE)
+        self._llm_node = self._get_str_param(PARAM_LLM_NODE)
 
     def register_publishers(self) -> None:
         """Register the dictation response publishers."""
@@ -83,33 +102,31 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         # Ability to issue ASR requests
-        topic1 = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_REQUEST}"
-        self._asr_publisher = self.create_publisher(AsrRequest, topic1, QOS_DEPTH_DEFAULT)
+        topic_asr_request = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_REQUEST}"
+        self._asr_publisher = self.create_publisher(AsrRequest, topic_asr_request, QOS_DEPTH_DEFAULT)
 
         # Ability to issue LLM requests
-        topic2 = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_REQUEST}"
-        self._llm_publisher = self.create_publisher(LlmRequest, topic2, QOS_DEPTH_DEFAULT)
+        topic_llm_request = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_REQUEST}"
+        self._llm_publisher = self.create_publisher(LlmRequest, topic_llm_request, QOS_DEPTH_DEFAULT)
 
     def register_subscribers(self) -> None:
         """Register the dictation request subscriber."""
         self.create_subscription(DictationRequest, TOPIC_DICTATION_REQUEST, self._listener_callback, QOS_DEPTH_DEFAULT)
 
         # Listen to ASR responses
-        topic_asr_response = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_RESPONSE}"
+        topic_asr_response = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_RESPONSE}"
         self.create_subscription(AsrResponse, topic_asr_response, self._on_asr_response, QOS_DEPTH_DEFAULT)
 
         # Listen to ASR updates
-        topic_asr_updates = (
-            f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}/{TOPIC_ASR_STREAMING_RESPONSE}"
-        )
+        topic_asr_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_STREAMING_RESPONSE}"
         self.create_subscription(AsrStreamingResponse, topic_asr_updates, self._on_asr_updates, QOS_DEPTH_DEFAULT)
 
         # Listen to LLM responses
-        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_RESPONSE}"
+        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_RESPONSE}"
         self.create_subscription(LlmResponse, topic_llm_response, self._on_llm_response, QOS_DEPTH_DEFAULT)
 
         # Listen to LLM updates
-        topic_llm_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_OLLAMA}/{TOPIC_LLM_STREAMING_RESPONSE}"
+        topic_llm_updates = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_STREAMING_RESPONSE}"
         self.create_subscription(LlmStreamingResponse, topic_llm_updates, self._on_llm_updates, QOS_DEPTH_DEFAULT)
 
     def _listener_callback(self, msg: DictationRequest) -> None:
