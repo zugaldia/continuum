@@ -13,6 +13,7 @@ from continuum.constants import (
     QOS_DEPTH_DEFAULT,
     TOPIC_ASR_REQUEST,
     ERROR_CODE_UNEXPECTED,
+    ERROR_CODE_SUCCESS,
 )
 from continuum_core.shared.queue_node import QueueNode
 from continuum_interfaces.msg import AsrResponse, AsrRequest, AsrStreamingResponse
@@ -58,7 +59,6 @@ class BaseAsrNode(QueueNode, ABC):
             sdk_response = future.result()
             self.publish_asr_response(sdk_response)
         except Exception as e:
-            self.get_logger().error(f"Error processing request: {e}")
             self.publish_asr_response(
                 ContinuumAsrResponse(
                     session_id=sdk_request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message=str(e)
@@ -78,13 +78,16 @@ class BaseAsrNode(QueueNode, ABC):
     #
 
     def publish_asr_response(self, sdk_response: ContinuumAsrResponse) -> None:
+        if sdk_response.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"ASR response error: {sdk_response}")
+        else:
+            self.get_logger().info(f"ASR response: {sdk_response}")
         response = AsrResponse()
         set_message_fields(response, sdk_response.model_dump())
-        self.get_logger().info(f"ASR response: {sdk_response}")
         self._asr_publisher.publish(response)
 
     def publish_asr_streaming_response(self, sdk_streaming_response: ContinuumAsrStreamingResponse) -> None:
+        self.get_logger().info(f"ASR streaming response: {sdk_streaming_response}")
         response = AsrStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
-        self.get_logger().info(f"ASR streaming response: {sdk_streaming_response}")
         self._asr_streaming_publisher.publish(response)

@@ -87,9 +87,9 @@ class QueueNode(AsyncNode, ABC):
             while len(self._current_requests) < MAX_CONCURRENT_REQUESTS and self._request_queue:
                 next_request = self._request_queue.popleft()
                 self._current_requests.append(next_request)
+                self._queue_request(next_request)
                 self.get_logger().info(
                     f"Starting queued request. "
                     f"Active: {len(self._current_requests)}/{MAX_CONCURRENT_REQUESTS}, "
                     f"Queue: {len(self._request_queue)}/{MAX_REQUEST_QUEUE_SIZE}"
                 )
-                self._queue_request(next_request)

@@ -12,6 +12,7 @@ from continuum.constants import (
     QOS_DEPTH_DEFAULT,
     TOPIC_LLM_REQUEST,
     ERROR_CODE_UNEXPECTED,
+    ERROR_CODE_SUCCESS,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum_core.shared.queue_node import QueueNode
@@ -58,7 +59,6 @@ class BaseLlmNode(QueueNode, ABC):
             sdk_response = future.result()
             self.publish_llm_response(sdk_response)
         except Exception as e:
-            self.get_logger().error(f"Error processing request: {e}")
             self.publish_llm_response(
                 ContinuumLlmResponse(
                     session_id=sdk_request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message=str(e)
@@ -78,13 +78,16 @@ class BaseLlmNode(QueueNode, ABC):
     #
 
     def publish_llm_response(self, sdk_response: ContinuumLlmResponse) -> None:
+        if sdk_response.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"LLM response error: {sdk_response}")
+        else:
+            self.get_logger().info(f"LLM response: {sdk_response}")
         response = LlmResponse()
         set_message_fields(response, sdk_response.model_dump())
-        self.get_logger().info(f"LLM response: {sdk_response}")
         self._llm_publisher.publish(response)
 
     def publish_llm_streaming_response(self, sdk_streaming_response: ContinuumLlmStreamingResponse) -> None:
+        self.get_logger().info(f"LLM streaming response: {sdk_streaming_response}")
         response = LlmStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
-        self.get_logger().info(f"LLM streaming response: {sdk_streaming_response}")
         self._llm_streaming_publisher.publish(response)
