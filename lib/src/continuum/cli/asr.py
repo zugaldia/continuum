@@ -5,9 +5,9 @@ from pathlib import Path
 
 import typer
 
-from continuum.asr import ContinuumAsrClient, FakeAsrClient, FasterWhisperAsrClient
+from continuum.asr import ContinuumAsrClient, FakeAsrClient, FasterWhisperAsrClient, OpenAiAsrClient
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
-from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTER_WHISPER
+from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTER_WHISPER, NODE_ASR_OPENAI
 
 
 def asr_command(
@@ -26,6 +26,8 @@ def asr_command(
         client = FakeAsrClient()
     elif provider == NODE_ASR_FASTER_WHISPER:
         client = FasterWhisperAsrClient()
+    elif provider == NODE_ASR_OPENAI:
+        client = OpenAiAsrClient()
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)

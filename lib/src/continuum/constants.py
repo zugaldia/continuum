@@ -11,6 +11,7 @@ PATH_APP = "app"
 # Node names
 NODE_ASR_FAKE = "fake"
 NODE_ASR_FASTER_WHISPER = "faster_whisper"
+NODE_ASR_OPENAI = "openai"
 NODE_LLM_FAKE = "fake"
 NODE_LLM_OLLAMA = "ollama"
 NODE_LLM_OPENAI = "openai"
