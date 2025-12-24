@@ -10,7 +10,7 @@ from continuum.llm import (
     FakeLlmClient,
     GoogleLlmClient,
     OllamaLlmClient,
-    OpenAILlmClient,
+    OpenAiLlmClient,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse
 
@@ -28,7 +28,7 @@ def llm_command(
     elif provider == NODE_LLM_OLLAMA:
         client = OllamaLlmClient()
     elif provider == NODE_LLM_OPENAI:
-        client = OpenAILlmClient()
+        client = OpenAiLlmClient()
     elif provider == NODE_LLM_GOOGLE:
         client = GoogleLlmClient()
     else:

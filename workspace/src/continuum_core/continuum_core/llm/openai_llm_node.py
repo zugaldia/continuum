@@ -3,7 +3,7 @@ from typing import Any
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from continuum.llm import OpenAILlmClient
+from continuum.llm import OpenAiLlmClient
 from continuum_core.llm.base_llm_node import BaseLlmNode
 
 
@@ -11,7 +11,7 @@ class OpenAILlmNode(BaseLlmNode):
     def __init__(self):
         super().__init__("openai_llm_node")
         self.set_node_info(name="OpenAI LLM Node", description="OpenAI LLM node for cloud inference")
-        self._client = OpenAILlmClient()
+        self._client = OpenAiLlmClient()
         self.get_logger().info("OpenAI LLM node initialized.")
 
     def on_shutdown(self) -> None:

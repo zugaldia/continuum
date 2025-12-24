@@ -19,7 +19,7 @@ from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
 
 
-class OpenAILlmClient(ContinuumLlmClient):
+class OpenAiLlmClient(ContinuumLlmClient):
     """OpenAI LLM client."""
 
     def __init__(self) -> None:
