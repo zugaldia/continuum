@@ -5,16 +5,21 @@ from ollama import AsyncClient, Message, ChatResponse
 
 from continuum.constants import ERROR_CODE_UNEXPECTED
 from continuum.llm.llm_client import ContinuumLlmClient
-from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
+from continuum.llm.models import (
+    ContinuumLlmResponse,
+    ContinuumLlmRequest,
+    ContinuumLlmStreamingResponse,
+    OllamaLlmOptions,
+)
 
 
 class OllamaLlmClient(ContinuumLlmClient):
     """Ollama LLM client for testing purposes."""
 
-    def __init__(self) -> None:
+    def __init__(self, options: OllamaLlmOptions = OllamaLlmOptions()) -> None:
         """Initialize the fake LLM client."""
         self._logger = logging.getLogger(__name__)
-        self._client = AsyncClient(host="http://orin:11434")
+        self._client = AsyncClient(host=options.host)
         self._logger.info("Ollama LLM client initialized.")
 
     async def execute_request(

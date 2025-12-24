@@ -4,7 +4,12 @@ import random
 from typing import Optional, Callable
 
 from continuum.llm.llm_client import ContinuumLlmClient
-from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
+from continuum.llm.models import (
+    ContinuumLlmResponse,
+    ContinuumLlmRequest,
+    ContinuumLlmStreamingResponse,
+    FakeLlmOptions,
+)
 
 # Fake LLM text used for testing
 FAKE_RESPONSE = "You are absolutely right!"
@@ -13,9 +18,10 @@ FAKE_RESPONSE = "You are absolutely right!"
 class FakeLlmClient(ContinuumLlmClient):
     """Fake LLM client for testing purposes."""
 
-    def __init__(self) -> None:
+    def __init__(self, options: FakeLlmOptions = FakeLlmOptions()) -> None:
         """Initialize the fake LLM client."""
         self._logger = logging.getLogger(__name__)
+        self._options = options
         self._logger.info("Fake LLM client initialized.")
 
     async def execute_request(
@@ -26,15 +32,15 @@ class FakeLlmClient(ContinuumLlmClient):
         """Execute LLM request and return response."""
         self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
 
-        # Chaos Monkey: Randomly throw an exception 25% of the time
-        if random.random() < 0.25:
+        # Chaos Monkey: Randomly throw an exception
+        if random.random() < self._options.error_rate:
             self._logger.error(f"Fake LLM error for session_id: {request.session_id}")
             raise Exception("Fake LLM error, courtesy of the Chaos Monkey.")
 
         # Stream words one at a time if the streaming callback is provided
         words = FAKE_RESPONSE.split()
         for i, word in enumerate(words):
-            await asyncio.sleep(1.0)  # Simulate token-by-token processing delay
+            await asyncio.sleep(self._options.streaming_delay_seconds)  # Simulate token-by-token processing delay
             if streaming_callback:
                 self._logger.debug(f"Intermediate result for session_id: {request.session_id}: {word}")
                 streaming_callback(ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=word))

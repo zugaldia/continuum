@@ -6,16 +6,22 @@ from google.genai import types
 
 from continuum.constants import ERROR_CODE_UNEXPECTED
 from continuum.llm.llm_client import ContinuumLlmClient
-from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
+from continuum.llm.models import (
+    ContinuumLlmResponse,
+    ContinuumLlmRequest,
+    ContinuumLlmStreamingResponse,
+    GoogleLlmOptions,
+)
+from continuum.utils import none_if_empty
 
 
 class GoogleLlmClient(ContinuumLlmClient):
     """Google LLM client."""
 
-    def __init__(self) -> None:
+    def __init__(self, options: GoogleLlmOptions = GoogleLlmOptions()) -> None:
         """Initialize the Google LLM client."""
         self._logger = logging.getLogger(__name__)
-        self._client = genai.Client()
+        self._client = genai.Client(api_key=none_if_empty(options.api_key))
         self._logger.info("Google LLM client initialized.")
 
     async def execute_request(

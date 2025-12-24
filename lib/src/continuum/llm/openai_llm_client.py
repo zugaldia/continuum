@@ -16,16 +16,22 @@ from openai.types.responses import (
 
 from continuum.constants import ERROR_CODE_UNEXPECTED
 from continuum.llm.llm_client import ContinuumLlmClient
-from continuum.llm.models import ContinuumLlmResponse, ContinuumLlmRequest, ContinuumLlmStreamingResponse
+from continuum.llm.models import (
+    ContinuumLlmResponse,
+    ContinuumLlmRequest,
+    ContinuumLlmStreamingResponse,
+    OpenAiLlmOptions,
+)
+from continuum.utils import none_if_empty
 
 
 class OpenAiLlmClient(ContinuumLlmClient):
     """OpenAI LLM client."""
 
-    def __init__(self) -> None:
+    def __init__(self, options: OpenAiLlmOptions = OpenAiLlmOptions()) -> None:
         """Initialize the OpenAI LLM client."""
         self._logger = logging.getLogger(__name__)
-        self._client = OpenAI()
+        self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
         self._logger.info("OpenAI LLM client initialized.")
 
     async def execute_request(

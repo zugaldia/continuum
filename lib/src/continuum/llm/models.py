@@ -29,7 +29,19 @@ class ContinuumLlmStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class OllamaLlmOptions(BaseModel):
-    """Configuration options for the Ollama client."""
+class FakeLlmOptions(BaseModel):
+    error_rate: float = 0.25
+    streaming_delay_seconds: float = 1.0
 
-    pass
+
+class OllamaLlmOptions(BaseModel):
+    host: str = "http://localhost:11434"
+
+
+class GoogleLlmOptions(BaseModel):
+    api_key: str = ""
+
+
+class OpenAiLlmOptions(BaseModel):
+    api_key: str = ""
+    base_url: str = ""
