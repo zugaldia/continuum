@@ -3,13 +3,13 @@
 We want to keep the fields in the models easily portable to ROS 2 types, which means we should limit them to the
 following Python types (source: https://docs.ros.org/en/kilted/Concepts/Basic/About-Interfaces.html#field-types):
 
-- builtins.bool
-- builtins.bytes*
-- builtins.float*
-- builtins.int*
-- builtins.str
+- builtins.bool (including arrays)
+- builtins.int (including arrays)
+- builtins.float (including arrays)
+- builtins.string (including arrays)
+- builtins.bytes (only a set/sequence of bytes)
 
-Similarly, instead of using optionals, we set up default values, like the language and language probability fields
+Similarly, instead of using optionals, we set up default values, like the language and language-probability fields
 in the ASR models.
 
 """
