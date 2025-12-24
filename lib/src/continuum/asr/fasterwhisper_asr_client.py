@@ -1,7 +1,7 @@
 import logging
 from typing import Iterable, Optional, Callable, List
 
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel, available_models
 from faster_whisper.transcribe import Segment, TranscriptionInfo
 
 from continuum.asr.asr_client import ContinuumAsrClient
@@ -11,6 +11,7 @@ from continuum.asr.models import (
     FasterWhisperAsrOptions,
     ContinuumAsrStreamingResponse,
 )
+from continuum.utils import none_if_empty
 
 
 class FasterWhisperAsrClient(ContinuumAsrClient):
@@ -19,8 +20,18 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
     def __init__(self, options: FasterWhisperAsrOptions = FasterWhisperAsrOptions()) -> None:
         """Initialize the Faster Whisper ASR client."""
         self._logger = logging.getLogger(__name__)
-        self._options = options
-        self._model = WhisperModel(options.model_size_or_path, device=options.device)
+        self._model = WhisperModel(
+            model_size_or_path=options.model_size_or_path,
+            device=options.device,
+            download_root=none_if_empty(options.download_root),
+        )
+
+    @staticmethod
+    def get_available_models() -> List[str]:
+        return available_models()
+
+    def get_supported_languages(self) -> List[str]:
+        return self._model.supported_languages
 
     async def execute_request(
         self,

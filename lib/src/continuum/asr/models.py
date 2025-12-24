@@ -29,12 +29,17 @@ class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class FasterWhisperAsrOptions(BaseModel):
-    """Configuration options for the Faster Whisper client."""
+class FakeAsrOptions(BaseModel):
+    error_rate: float = 0.25
+    streaming_delay_seconds: float = 1.0
 
+
+class FasterWhisperAsrOptions(BaseModel):
     model_size_or_path: str = "medium"
     device: str = "auto"
+    download_root: str = ""  # If empty, use the standard Hugging Face cache directory
 
 
 class OpenAiAsrOptions(BaseModel):
-    pass
+    api_key: str = ""
+    base_url: str = ""

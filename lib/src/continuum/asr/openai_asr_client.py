@@ -12,6 +12,7 @@ from continuum.asr.models import (
     OpenAiAsrOptions,
 )
 from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.utils import none_if_empty
 
 
 class OpenAiAsrClient(ContinuumAsrClient):
@@ -20,8 +21,7 @@ class OpenAiAsrClient(ContinuumAsrClient):
     def __init__(self, options: OpenAiAsrOptions = OpenAiAsrOptions()) -> None:
         """Initialize the OpenAI ASR client."""
         self._logger = logging.getLogger(__name__)
-        self._options = options
-        self._client = OpenAI()
+        self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
 
     async def execute_request(
         self,
