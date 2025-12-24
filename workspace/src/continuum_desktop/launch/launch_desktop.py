@@ -8,6 +8,7 @@ from continuum.constants import (
     CONTINUUM_NAMESPACE,
     NODE_APP_DICTATION,
     NODE_ASR_FASTER_WHISPER,
+    NODE_ASR_OPENAI,
     NODE_LLM_OLLAMA,
     NODE_LLM_OPENAI,
     NODE_LLM_GOOGLE,
@@ -65,9 +66,16 @@ def generate_launch_description():
             # ASR nodes
             Node(
                 package="continuum_core",
-                executable="faster_whisper_asr_node",
-                name="faster_whisper_asr_node",
+                executable="fasterwhisper_asr_node",
+                name="fasterwhisper_asr_node",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_FASTER_WHISPER}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="openai_asr_node",
+                name="openai_asr_node",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_ASR}/{NODE_ASR_OPENAI}",
                 parameters=parameters,
             ),
             # LLM nodes

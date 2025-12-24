@@ -31,7 +31,8 @@ setup(
             "echo_node = continuum_core.health.echo_node:main",
             # ASR nodes
             "fake_asr_node = continuum_core.asr.fake_asr_node:main",
-            "faster_whisper_asr_node = continuum_core.asr.faster_whisper_asr_node:main",
+            "fasterwhisper_asr_node = continuum_core.asr.fasterwhisper_asr_node:main",
+            "openai_asr_node = continuum_core.asr.openai_asr_node:main",
             # LLM nodes
             "fake_llm_node = continuum_core.llm.fake_llm_node:main",
             "ollama_llm_node = continuum_core.llm.ollama_llm_node:main",
