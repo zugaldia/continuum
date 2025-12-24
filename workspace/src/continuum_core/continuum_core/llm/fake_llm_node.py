@@ -10,6 +10,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 
 from continuum.llm import FakeLlmClient
+from continuum.llm.models import FakeLlmOptions
 from continuum_core.llm.base_llm_node import BaseLlmNode
 
 
@@ -17,7 +18,7 @@ class FakeLlmNode(BaseLlmNode):
     def __init__(self):
         super().__init__("fake_llm_node")
         self.set_node_info(name="Fake LLM Node", description="Fake LLM node for testing purposes")
-        self._client = FakeLlmClient()
+        self._client = FakeLlmClient(options=FakeLlmOptions())
         self.get_logger().info("Fake LLM node initialized.")
 
     def on_shutdown(self) -> None:
