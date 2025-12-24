@@ -29,8 +29,12 @@ class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class FasterWhisperOptions(BaseModel):
+class FasterWhisperAsrOptions(BaseModel):
     """Configuration options for the Faster Whisper client."""
 
     model_size_or_path: str = "medium"
     device: str = "auto"
+
+
+class OpenAiAsrOptions(BaseModel):
+    pass

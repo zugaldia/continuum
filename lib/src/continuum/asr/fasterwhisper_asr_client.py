@@ -8,7 +8,7 @@ from continuum.asr.asr_client import ContinuumAsrClient
 from continuum.asr.models import (
     ContinuumAsrResponse,
     ContinuumAsrRequest,
-    FasterWhisperOptions,
+    FasterWhisperAsrOptions,
     ContinuumAsrStreamingResponse,
 )
 
@@ -16,7 +16,7 @@ from continuum.asr.models import (
 class FasterWhisperAsrClient(ContinuumAsrClient):
     """Faster Whisper ASR (Automatic Speech Recognition) client."""
 
-    def __init__(self, options: FasterWhisperOptions = FasterWhisperOptions()) -> None:
+    def __init__(self, options: FasterWhisperAsrOptions = FasterWhisperAsrOptions()) -> None:
         """Initialize the Faster Whisper ASR client."""
         self._logger = logging.getLogger(__name__)
         self._options = options

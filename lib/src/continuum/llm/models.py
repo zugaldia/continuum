@@ -29,7 +29,7 @@ class ContinuumLlmStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class OllamaOptions(BaseModel):
+class OllamaLlmOptions(BaseModel):
     """Configuration options for the Ollama client."""
 
     pass
