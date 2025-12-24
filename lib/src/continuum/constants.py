@@ -8,19 +8,19 @@ PATH_ASR = "asr"
 PATH_LLM = "llm"
 PATH_APP = "app"
 
+# Profile names
+PROFILE_LOCAL = "local"
+PROFILE_CLOUD = "cloud"
+
 # Node names
 NODE_ASR_FAKE = "fake"
-NODE_ASR_FASTER_WHISPER = "faster_whisper"
+NODE_ASR_FASTERWHISPER = "fasterwhisper"
 NODE_ASR_OPENAI = "openai"
 NODE_LLM_FAKE = "fake"
 NODE_LLM_OLLAMA = "ollama"
 NODE_LLM_OPENAI = "openai"
 NODE_LLM_GOOGLE = "google"
 NODE_APP_DICTATION = "dictation"
-
-# Profile names
-PROFILE_LOCAL = "local"
-PROFILE_CLOUD = "cloud"
 
 # Topic names
 TOPIC_ECHO_REQUEST = "echo_request"
@@ -36,10 +36,47 @@ TOPIC_DICTATION_REQUEST = "dictation_request"
 TOPIC_DICTATION_RESPONSE = "dictation_response"
 TOPIC_DICTATION_STREAMING_RESPONSE = "dictation_streaming_response"
 
-# Parameter names
-PARAM_NODE_NAME = "node_name"
-PARAM_NODE_DESCRIPTION = "node_description"
+# Common parameters
 PARAM_DEBUG_MODE = "debug_mode"
+PARAM_DEBUG_MODE_DEFAULT = False
+PARAM_NODE_NAME = "node_name"
+PARAM_NODE_NAME_DEFAULT = ""
+PARAM_NODE_DESCRIPTION = "node_description"
+PARAM_NODE_DESCRIPTION_DEFAULT = ""
+
+# FasterWhisper ASR parameters
+PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH = "model_size_or_path"
+PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH_DEFAULT = "medium"
+PARAM_FASTERWHISPER_DEVICE = "device"
+PARAM_FASTERWHISPER_DEVICE_DEFAULT = "auto"
+PARAM_FASTERWHISPER_DOWNLOAD_ROOT = "download_root"
+PARAM_FASTERWHISPER_DOWNLOAD_ROOT_DEFAULT = ""
+
+# OpenAI ASR parameters
+PARAM_OPENAI_ASR_API_KEY = "api_key"
+PARAM_OPENAI_ASR_API_KEY_DEFAULT = ""
+PARAM_OPENAI_ASR_BASE_URL = "base_url"
+PARAM_OPENAI_ASR_BASE_URL_DEFAULT = ""
+
+# Ollama LLM parameters
+PARAM_OLLAMA_HOST = "host"
+PARAM_OLLAMA_HOST_DEFAULT = "http://localhost:11434"
+
+# OpenAI LLM parameters
+PARAM_OPENAI_LLM_API_KEY = "api_key"
+PARAM_OPENAI_LLM_API_KEY_DEFAULT = ""
+PARAM_OPENAI_LLM_BASE_URL = "base_url"
+PARAM_OPENAI_LLM_BASE_URL_DEFAULT = ""
+
+# Google LLM parameters
+PARAM_GOOGLE_LLM_API_KEY = "api_key"
+PARAM_GOOGLE_LLM_API_KEY_DEFAULT = ""
+
+# Dictation app parameters
+PARAM_ASR_NODE = "asr_node"
+PARAM_ASR_NODE_DEFAULT = NODE_ASR_FASTERWHISPER
+PARAM_LLM_NODE = "llm_node"
+PARAM_LLM_NODE_DEFAULT = NODE_LLM_OLLAMA
 
 # QoS settings
 QOS_DEPTH_DEFAULT = 10
