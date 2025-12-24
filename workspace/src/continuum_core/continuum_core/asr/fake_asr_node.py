@@ -14,6 +14,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 
 from continuum.asr import FakeAsrClient
+from continuum.asr.models import FakeAsrOptions
 from continuum_core.asr.base_asr_node import BaseAsrNode
 
 
@@ -21,7 +22,7 @@ class FakeAsrNode(BaseAsrNode):
     def __init__(self) -> None:
         super().__init__("fake_asr_node")
         self.set_node_info(name="Fake ASR Node", description="Fake ASR node for testing purposes")
-        self._client = FakeAsrClient()
+        self._client = FakeAsrClient(options=FakeAsrOptions())
         self.get_logger().info("Fake ASR node initialized.")
 
     def on_shutdown(self) -> None:
