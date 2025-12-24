@@ -4,4 +4,45 @@
 # /** applies to all nodes
 /**:
   ros__parameters:
-    debug_mode: true
+    debug_mode: false
+
+# FasterWhisper ASR node
+/continuum/asr/fasterwhisper/fasterwhisper_asr:
+  ros__parameters:
+    model_size_or_path: "medium"
+    device: "auto"
+    download_root: ""
+
+# OpenAI ASR node
+/continuum/asr/openai/openai_asr:
+  ros__parameters:
+    api_key: ""
+    base_url: ""
+
+# Ollama LLM node
+/continuum/llm/ollama/ollama_llm:
+  ros__parameters:
+    host: "http://localhost:11434"
+
+# OpenAI LLM node
+/continuum/llm/openai/openai_llm:
+  ros__parameters:
+    api_key: ""
+    base_url: ""
+
+# Google LLM node
+/continuum/llm/google/google_llm:
+  ros__parameters:
+    api_key: ""
+
+# Dictation app node - local profile
+/continuum/app/dictation/local/dictation_app_local:
+  ros__parameters:
+    asr_node: "fasterwhisper"
+    llm_node: "ollama"
+
+# Dictation app node - cloud profile
+/continuum/app/dictation/cloud/dictation_app_cloud:
+  ros__parameters:
+    asr_node: "openai"
+    llm_node: "google"

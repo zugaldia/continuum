@@ -38,13 +38,13 @@ foxglove:
 #
 
 launch-desktop:
-	ros2 launch continuum_desktop launch_desktop.py
+	ros2 launch continuum_desktop launch_desktop.py continuum_config:=../continuum.yaml
 
 launch-desktop-with-bridge:
-	ros2 launch continuum_desktop launch_desktop_with_bridge.py
+	ros2 launch continuum_desktop launch_desktop_with_bridge.py continuum_config:=../continuum.yaml
 
 launch-desktop-with-foxglove:
-	ros2 launch continuum_desktop launch_desktop_with_foxglove.py
+	ros2 launch continuum_desktop launch_desktop_with_foxglove.py continuum_config:=../continuum.yaml
 
 launch-desktop-with-fakes:
-	ros2 launch continuum_desktop launch_desktop_with_fakes.py
+	ros2 launch continuum_desktop launch_desktop_with_fakes.py continuum_config:=../continuum.yaml
