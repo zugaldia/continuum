@@ -44,9 +44,15 @@ PARAM_NODE_NAME_DEFAULT = ""
 PARAM_NODE_DESCRIPTION = "node_description"
 PARAM_NODE_DESCRIPTION_DEFAULT = ""
 
+# Common ASR parameters
+PARAM_ASR_MODEL_NAME = "model_name"
+PARAM_ASR_MODEL_NAME_DEFAULT = ""  # Shared param is generically empty (the concrete values are below)
+
+# Default model names for each ASR provider
+DEFAULT_MODEL_NAME_FASTERWHISPER = "medium"
+DEFAULT_MODEL_NAME_OPENAI_ASR = "gpt-4o-transcribe"
+
 # FasterWhisper ASR parameters
-PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH = "model_size_or_path"
-PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH_DEFAULT = "medium"
 PARAM_FASTERWHISPER_DEVICE = "device"
 PARAM_FASTERWHISPER_DEVICE_DEFAULT = "auto"
 PARAM_FASTERWHISPER_DOWNLOAD_ROOT = "download_root"
@@ -57,6 +63,15 @@ PARAM_OPENAI_ASR_API_KEY = "api_key"
 PARAM_OPENAI_ASR_API_KEY_DEFAULT = ""
 PARAM_OPENAI_ASR_BASE_URL = "base_url"
 PARAM_OPENAI_ASR_BASE_URL_DEFAULT = ""
+
+# Common LLM parameters
+PARAM_LLM_MODEL_NAME = "model_name"
+PARAM_LLM_MODEL_NAME_DEFAULT = ""  # Shared param is generically empty (the concrete values are below)
+
+# Default model names for each LLM provider
+DEFAULT_MODEL_NAME_OPENAI = "gpt-5.2"
+DEFAULT_MODEL_NAME_GOOGLE = "gemini-3-flash-preview"
+DEFAULT_MODEL_NAME_OLLAMA = "gemma3"
 
 # Ollama LLM parameters
 PARAM_OLLAMA_HOST = "host"
