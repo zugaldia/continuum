@@ -13,6 +13,7 @@ from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_
 def asr_command(
     provider: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR provider to use"),
     audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
+    language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Transcribe audio file using ASR."""
     if not audio_file.exists():
@@ -32,7 +33,7 @@ def asr_command(
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
-    request = ContinuumAsrRequest(audio_path=str(audio_file.absolute()))
+    request = ContinuumAsrRequest(audio_path=str(audio_file.absolute()), language=language)
 
     def streaming_callback(streaming_response: ContinuumAsrStreamingResponse) -> None:
         """Callback to display streaming responses."""

@@ -14,7 +14,7 @@ from continuum.apps.models import (
 )
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrResponse, ContinuumAsrStreamingResponse
 from continuum.client import ContinuumClient
-from continuum.constants import ERROR_CODE_SUCCESS, NODE_ASR_FASTERWHISPER, NODE_LLM_OLLAMA
+from continuum.constants import ERROR_CODE_SUCCESS, NODE_ASR_FASTERWHISPER, NODE_LLM_OLLAMA, PROFILE_LOCAL
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum.utils import generate_session_id
 
@@ -89,6 +89,7 @@ def echo_command(
 def asr_command(
     node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send an ASR request and wait for the response."""
     session_id = generate_session_id()
@@ -114,7 +115,7 @@ def asr_command(
             async with continuum_client_connection() as client:
                 client.subscribe_asr_streaming_response(node_name, on_asr_streaming_response)
                 client.subscribe_asr_response(node_name, on_asr_response)
-                request = ContinuumAsrRequest(session_id=session_id, audio_path=audio_path)
+                request = ContinuumAsrRequest(session_id=session_id, audio_path=audio_path, language=language)
                 client.publish_asr_request(node_name, request)
                 await asyncio.wait_for(response_received.wait(), timeout=30.0)
                 typer.echo(f"ASR transcript: {received_transcript}")
@@ -168,13 +169,13 @@ def llm_command(
 
 @app.command(name="dictation")
 def dictation_command(
-    asr_node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
-    llm_node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
     audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    profile: str = typer.Option(PROFILE_LOCAL, help="Profile to use (local or cloud)"),
+    language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send a dictation request and wait for the response."""
     session_id = generate_session_id()
-    typer.echo(f"Sending dictation request with ASR={asr_node_name}, LLM={llm_node_name}")
+    typer.echo(f"Sending dictation request with profile={profile}")
     typer.echo(f"Audio path: {audio_path}")
     typer.echo(f"Session ID: {session_id}")
 
@@ -199,12 +200,14 @@ def dictation_command(
 
         try:
             async with continuum_client_connection() as client:
-                client.subscribe_dictation_streaming_response(on_dictation_streaming_response)
-                client.subscribe_dictation_response(on_dictation_response)
+                client.subscribe_dictation_streaming_response(on_dictation_streaming_response, profile)
+                client.subscribe_dictation_response(on_dictation_response, profile)
                 request = ContinuumDictationRequest(
-                    session_id=session_id, asr_node=asr_node_name, llm_node=llm_node_name, audio_path=audio_path
+                    session_id=session_id,
+                    audio_path=audio_path,
+                    language=language,
                 )
-                client.publish_dictation_request(request)
+                client.publish_dictation_request(request, profile)
                 await asyncio.wait_for(response_received.wait(), timeout=60.0)
                 typer.echo(f"Dictation content: {received_content}")
         except Exception as e:
