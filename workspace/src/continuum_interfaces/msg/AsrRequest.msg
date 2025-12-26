@@ -3,3 +3,4 @@
 
 string session_id  # Unique identifier for the ASR session
 string audio_path  # Path to the audio file to transcribe
+string language  # Language code in ISO-639-1 format (e.g. `en`), empty for auto-detection
