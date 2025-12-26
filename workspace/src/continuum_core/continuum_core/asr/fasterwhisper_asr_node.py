@@ -7,8 +7,6 @@ from rclpy.executors import ExternalShutdownException
 from continuum.asr import FasterWhisperAsrClient
 from continuum.asr.models import FasterWhisperAsrOptions
 from continuum.constants import (
-    PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH,
-    PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH_DEFAULT,
     PARAM_FASTERWHISPER_DEVICE,
     PARAM_FASTERWHISPER_DEVICE_DEFAULT,
     PARAM_FASTERWHISPER_DOWNLOAD_ROOT,
@@ -23,11 +21,11 @@ class FasterWhisperAsrNode(BaseAsrNode):
         self.set_node_info(name="Faster Whisper ASR Node", description="Fast inference engine for Whisper")
 
         # Read parameters and create options
-        model_size_or_path = self._get_str_param(PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH)
+        model_name = self.model_name
         device = self._get_str_param(PARAM_FASTERWHISPER_DEVICE)
         download_root = self._get_str_param(PARAM_FASTERWHISPER_DOWNLOAD_ROOT)
         options = FasterWhisperAsrOptions(
-            model_size_or_path=model_size_or_path,
+            model_name=model_name,
             device=device,
             download_root=download_root,
         )
@@ -48,11 +46,6 @@ class FasterWhisperAsrNode(BaseAsrNode):
     def register_parameters(self) -> None:
         """Register custom node parameters."""
         super().register_parameters()
-        self.declare_parameter(
-            PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH,
-            PARAM_FASTERWHISPER_MODEL_SIZE_OR_PATH_DEFAULT,
-            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
-        )
         self.declare_parameter(
             PARAM_FASTERWHISPER_DEVICE,
             PARAM_FASTERWHISPER_DEVICE_DEFAULT,

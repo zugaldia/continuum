@@ -22,8 +22,13 @@ class FakeAsrNode(BaseAsrNode):
     def __init__(self) -> None:
         super().__init__("fake_asr_node")
         self.set_node_info(name="Fake ASR Node", description="Fake ASR node for testing purposes")
-        self._client = FakeAsrClient(options=FakeAsrOptions())
-        self.get_logger().info("Fake ASR node initialized.")
+
+        # Read parameters and create options
+        model_name = self.model_name
+        options = FakeAsrOptions(model_name=model_name)
+
+        self._client = FakeAsrClient(options=options)
+        self.get_logger().info(f"Fake ASR node initialized: {options}")
 
     def on_shutdown(self) -> None:
         """Clean up fake ASR node resources."""

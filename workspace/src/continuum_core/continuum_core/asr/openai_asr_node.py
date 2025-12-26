@@ -20,10 +20,11 @@ class OpenAiAsrNode(BaseAsrNode):
         super().__init__("openai_asr_node")
         self.set_node_info(name="OpenAI ASR Node", description="OpenAI speech recognition service")
 
-        # Get parameters and create options
+        # Read parameters and create options
+        model_name = self.model_name
         api_key = self._get_str_param(PARAM_OPENAI_ASR_API_KEY)
         base_url = self._get_str_param(PARAM_OPENAI_ASR_BASE_URL)
-        options = OpenAiAsrOptions(api_key=api_key, base_url=base_url)
+        options = OpenAiAsrOptions(model_name=model_name, api_key=api_key, base_url=base_url)
 
         self._client = OpenAiAsrClient(options=options)
         self.get_logger().info(f"OpenAI ASR node initialized: {options}")

@@ -14,9 +14,12 @@ from continuum.constants import (
     TOPIC_ASR_REQUEST,
     ERROR_CODE_UNEXPECTED,
     ERROR_CODE_SUCCESS,
+    PARAM_ASR_MODEL_NAME,
+    PARAM_ASR_MODEL_NAME_DEFAULT,
 )
 from continuum_core.shared.queue_node import QueueNode
 from continuum_interfaces.msg import AsrResponse, AsrRequest, AsrStreamingResponse
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
 class BaseAsrNode(QueueNode, ABC):
@@ -31,6 +34,15 @@ class BaseAsrNode(QueueNode, ABC):
     #
     # Base node methods
     #
+
+    def register_parameters(self) -> None:
+        """Register the ASR node parameters."""
+        super().register_parameters()
+        self.declare_parameter(
+            PARAM_ASR_MODEL_NAME,
+            PARAM_ASR_MODEL_NAME_DEFAULT,
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
+        )
 
     def register_publishers(self) -> None:
         """Register the ASR response publishers."""
@@ -91,3 +103,12 @@ class BaseAsrNode(QueueNode, ABC):
         response = AsrStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
         self._asr_streaming_publisher.publish(response)
+
+    #
+    # Properties
+    #
+
+    @property
+    def model_name(self) -> str:
+        """Get the model name parameter."""
+        return self._get_str_param(PARAM_ASR_MODEL_NAME)
