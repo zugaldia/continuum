@@ -25,6 +25,8 @@ class ContinuumAppResponse(ContinuumResponse):
 
 class ContinuumDictationRequest(ContinuumAppRequest):
     audio_path: str
+    language: str = ""
+    context: str = ""
 
 
 class ContinuumDictationResponse(ContinuumAppResponse):

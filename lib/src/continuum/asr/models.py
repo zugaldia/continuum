@@ -5,6 +5,7 @@ from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStrea
 
 class ContinuumAsrRequest(ContinuumRequest):
     audio_path: str
+    language: str = ""
 
 
 #
@@ -29,17 +30,22 @@ class ContinuumAsrStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class FakeAsrOptions(BaseModel):
+class BaseAsrOptions(BaseModel):
+    """Base options class for all ASR providers."""
+
+    model_name: str = ""
+
+
+class FakeAsrOptions(BaseAsrOptions):
     error_rate: float = 0.25
     streaming_delay_seconds: float = 1.0
 
 
-class FasterWhisperAsrOptions(BaseModel):
-    model_size_or_path: str = "medium"
+class FasterWhisperAsrOptions(BaseAsrOptions):
     device: str = "auto"
     download_root: str = ""  # If empty, use the standard Hugging Face cache directory
 
 
-class OpenAiAsrOptions(BaseModel):
+class OpenAiAsrOptions(BaseAsrOptions):
     api_key: str = ""
     base_url: str = ""

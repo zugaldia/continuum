@@ -29,19 +29,25 @@ class ContinuumLlmStreamingResponse(ContinuumStreamingResponse):
 #
 
 
-class FakeLlmOptions(BaseModel):
+class BaseLlmOptions(BaseModel):
+    """Base options class for all LLM providers."""
+
+    model_name: str = ""
+
+
+class FakeLlmOptions(BaseLlmOptions):
     error_rate: float = 0.25
     streaming_delay_seconds: float = 1.0
 
 
-class OllamaLlmOptions(BaseModel):
+class OllamaLlmOptions(BaseLlmOptions):
     host: str = "http://localhost:11434"
 
 
-class GoogleLlmOptions(BaseModel):
+class GoogleLlmOptions(BaseLlmOptions):
     api_key: str = ""
 
 
-class OpenAiLlmOptions(BaseModel):
+class OpenAiLlmOptions(BaseLlmOptions):
     api_key: str = ""
     base_url: str = ""
