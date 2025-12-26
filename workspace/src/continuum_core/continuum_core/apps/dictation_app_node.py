@@ -1,7 +1,7 @@
 """
 
 Applications are a special kind of node that not only extends the regular queuing infrastructure, they also implement
-the ContinuumClient execute_request function to kickstart/orchestrate the nodes they utilize to fulfill a request.
+the ContinuumClient execute_request function to kickstart/orchestrate the nodes they use to fulfill a request.
 
 """
 
@@ -44,7 +44,9 @@ from continuum.constants import (
     TOPIC_LLM_STREAMING_RESPONSE,
 )
 from continuum.models import ContinuumClient
+from continuum.utils import none_if_empty
 from continuum_core.apps.base_app_node import BaseAppNode
+from continuum_core.prompts.dictation import DICTATION_PROMPT, DEFAULT_CONTEXT
 from continuum_interfaces.msg import (
     DictationResponse,
     DictationRequest,
@@ -65,6 +67,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     _app_streaming_publisher: Publisher[DictationStreamingResponse]
     _asr_node: str
     _llm_node: str
+    _session_requests: dict[str, ContinuumDictationRequest]
 
     def __init__(self):
         super().__init__("dictation_app_node")
@@ -74,6 +77,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         self._client = self
+        self._session_requests = {}
         self.get_logger().info(f"Dictation app node initialized with {self._asr_node}/{self._llm_node}.")
 
     #
@@ -131,8 +135,8 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
 
     def _listener_callback(self, msg: DictationRequest) -> None:
         """Handle incoming dictation requests."""
-        self.get_logger().info(f"Dictation request received with session_id: {msg.session_id}")
         sdk_request = ContinuumDictationRequest.from_ros(message_to_ordereddict(msg))
+        self.get_logger().info(f"Dictation request received: {sdk_request}")
         self.receive_request(sdk_request)
 
     async def execute_request(
@@ -142,14 +146,22 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     ) -> ContinuumDictationResponse:
         self._logger.info(f"Starting dictation request for session_id: {request.session_id}")
         self.add_active_session(request.session_id)
-        asr_request = AsrRequest(session_id=request.session_id, audio_path=request.audio_path)
-        self._asr_publisher.publish(asr_request)
+        self._session_requests[request.session_id] = request
+        self._asr_publisher.publish(
+            AsrRequest(session_id=request.session_id, audio_path=request.audio_path, language=request.language)
+        )
         return ContinuumDictationResponse(session_id=request.session_id, status=DICTATION_STATUS_QUEUED)
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
         """Handle incoming ASR responses."""
         # Only process responses for sessions we initiated
         if not self.has_active_session(msg.session_id):
+            return
+
+        # Retrieve the original request
+        original_request = self._session_requests.get(msg.session_id)
+        if original_request is None:
+            self.get_logger().error(f"No stored request found for session_id: {msg.session_id}")
             return
 
         # Check if the ASR response contains an error
@@ -162,19 +174,34 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
                     error_message=msg.error_message,
                 )
             )
-            self.remove_active_session(msg.session_id)
+            self._cleanup_session(msg.session_id)
+            return
+
+        transcription = none_if_empty(msg.transcription)
+        if transcription is None:
+            error_message = f"ASR produced an empty transcription ({msg.transcription})."
+            self.get_logger().error(error_message)
+            self.publish_app_response(
+                ContinuumDictationResponse(
+                    session_id=msg.session_id,
+                    error_code=ERROR_CODE_UNEXPECTED,
+                    error_message=error_message,
+                )
+            )
+            self._cleanup_session(msg.session_id)
             return
 
         # Not only this provides an intermediate result to the consumer to show actual progress to the user,
         # if the LLM request fails for some reason, this text could be used as fallback.
         self.publish_app_response(
             ContinuumDictationResponse(
-                session_id=msg.session_id, content_text=msg.transcription, status=DICTATION_STATUS_TRANSCRIBED
+                session_id=msg.session_id, content_text=transcription, status=DICTATION_STATUS_TRANSCRIBED
             )
         )
 
-        # Request final pass by the LLM
-        content_text = f"Copyedit the following text: {msg.transcription}"
+        # Request final pass by the LLM, using context from the original request
+        context = none_if_empty(original_request.context) or DEFAULT_CONTEXT
+        content_text = DICTATION_PROMPT.format(CONTEXT=context, INPUT=transcription.strip())
         llm_request = LlmRequest(session_id=msg.session_id, content_text=content_text)
         self._llm_publisher.publish(llm_request)
 
@@ -210,8 +237,8 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
                 )
             )
 
-        # Remove the session from tracking as the flow is complete
-        self.remove_active_session(msg.session_id)
+        # Clean up session state
+        self._cleanup_session(msg.session_id)
 
     def _on_llm_updates(self, msg: LlmStreamingResponse) -> None:
         """Handle incoming LLM streaming responses."""
@@ -252,6 +279,11 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     #
     # Custom dictation app methods
     #
+
+    def _cleanup_session(self, session_id: str) -> None:
+        """Clean up session state and tracking."""
+        self._session_requests.pop(session_id, None)
+        self.remove_active_session(session_id)
 
     def publish_app_response(self, sdk_response: ContinuumDictationResponse) -> None:
         response = DictationResponse()
