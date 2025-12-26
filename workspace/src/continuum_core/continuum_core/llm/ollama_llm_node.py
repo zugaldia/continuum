@@ -17,7 +17,8 @@ class OllamaLlmNode(BaseLlmNode):
 
         # Get parameters and create options
         host = self._get_str_param(PARAM_OLLAMA_HOST)
-        options = OllamaLlmOptions(host=host)
+        model_name = self.model_name
+        options = OllamaLlmOptions(host=host, model_name=model_name)
 
         self._client = OllamaLlmClient(options=options)
         self.get_logger().info(f"Ollama LLM node initialized: {options}")

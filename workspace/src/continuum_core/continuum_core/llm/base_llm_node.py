@@ -13,10 +13,13 @@ from continuum.constants import (
     TOPIC_LLM_REQUEST,
     ERROR_CODE_UNEXPECTED,
     ERROR_CODE_SUCCESS,
+    PARAM_LLM_MODEL_NAME,
+    PARAM_LLM_MODEL_NAME_DEFAULT,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum_core.shared.queue_node import QueueNode
 from continuum_interfaces.msg import LlmResponse, LlmRequest, LlmStreamingResponse
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
 class BaseLlmNode(QueueNode, ABC):
@@ -31,6 +34,15 @@ class BaseLlmNode(QueueNode, ABC):
     #
     # Base node methods
     #
+
+    def register_parameters(self) -> None:
+        """Register the LLM node parameters."""
+        super().register_parameters()
+        self.declare_parameter(
+            PARAM_LLM_MODEL_NAME,
+            PARAM_LLM_MODEL_NAME_DEFAULT,
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
+        )
 
     def register_publishers(self) -> None:
         """Register the LLM response publishers."""
@@ -91,3 +103,12 @@ class BaseLlmNode(QueueNode, ABC):
         response = LlmStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
         self._llm_streaming_publisher.publish(response)
+
+    #
+    # Properties
+    #
+
+    @property
+    def model_name(self) -> str:
+        """Get the model name parameter."""
+        return self._get_str_param(PARAM_LLM_MODEL_NAME)

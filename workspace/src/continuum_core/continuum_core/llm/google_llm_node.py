@@ -17,7 +17,8 @@ class GoogleLlmNode(BaseLlmNode):
 
         # Get parameters and create options
         api_key = self._get_str_param(PARAM_GOOGLE_LLM_API_KEY)
-        options = GoogleLlmOptions(api_key=api_key)
+        model_name = self.model_name
+        options = GoogleLlmOptions(api_key=api_key, model_name=model_name)
 
         self._client = GoogleLlmClient(options=options)
         self.get_logger().info(f"Google LLM node initialized: {options}")

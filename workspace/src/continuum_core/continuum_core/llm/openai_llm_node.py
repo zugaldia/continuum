@@ -23,7 +23,8 @@ class OpenAILlmNode(BaseLlmNode):
         # Get parameters and create options
         api_key = self._get_str_param(PARAM_OPENAI_LLM_API_KEY)
         base_url = self._get_str_param(PARAM_OPENAI_LLM_BASE_URL)
-        options = OpenAiLlmOptions(api_key=api_key, base_url=base_url)
+        model_name = self.model_name
+        options = OpenAiLlmOptions(api_key=api_key, base_url=base_url, model_name=model_name)
 
         self._client = OpenAiLlmClient(options=options)
         self.get_logger().info(f"OpenAI LLM node initialized: {options}")
