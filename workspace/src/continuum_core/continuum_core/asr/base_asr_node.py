@@ -99,7 +99,7 @@ class BaseAsrNode(QueueNode, ABC):
         self._asr_publisher.publish(response)
 
     def publish_asr_streaming_response(self, sdk_streaming_response: ContinuumAsrStreamingResponse) -> None:
-        self.get_logger().info(f"ASR streaming response: {sdk_streaming_response}")
+        self.get_logger().debug(f"ASR streaming response: {sdk_streaming_response}")
         response = AsrStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
         self._asr_streaming_publisher.publish(response)

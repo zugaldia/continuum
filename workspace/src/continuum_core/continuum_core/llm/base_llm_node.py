@@ -99,7 +99,7 @@ class BaseLlmNode(QueueNode, ABC):
         self._llm_publisher.publish(response)
 
     def publish_llm_streaming_response(self, sdk_streaming_response: ContinuumLlmStreamingResponse) -> None:
-        self.get_logger().info(f"LLM streaming response: {sdk_streaming_response}")
+        self.get_logger().debug(f"LLM streaming response: {sdk_streaming_response}")
         response = LlmStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
         self._llm_streaming_publisher.publish(response)

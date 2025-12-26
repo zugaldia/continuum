@@ -294,7 +294,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     def publish_app_streaming_response(self, sdk_streaming_response: ContinuumDictationStreamingResponse) -> None:
         response = DictationStreamingResponse()
         set_message_fields(response, sdk_streaming_response.model_dump())
-        self.get_logger().info(f"Dictation streaming response: {sdk_streaming_response}")
+        self.get_logger().debug(f"Dictation streaming response: {sdk_streaming_response}")
         self._app_streaming_publisher.publish(response)
 
 
