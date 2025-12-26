@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Callable
 
-from openai import OpenAI
+from openai import OpenAI, Omit
 from openai.types.audio import TranscriptionTextDoneEvent, TranscriptionTextDeltaEvent
 
 from continuum.asr.asr_client import ContinuumAsrClient
@@ -11,7 +11,7 @@ from continuum.asr.models import (
     ContinuumAsrStreamingResponse,
     OpenAiAsrOptions,
 )
-from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.constants import ERROR_CODE_UNEXPECTED, DEFAULT_MODEL_NAME_OPENAI_ASR
 from continuum.utils import none_if_empty
 
 
@@ -21,6 +21,7 @@ class OpenAiAsrClient(ContinuumAsrClient):
     def __init__(self, options: OpenAiAsrOptions = OpenAiAsrOptions()) -> None:
         """Initialize the OpenAI ASR client."""
         self._logger = logging.getLogger(__name__)
+        self._options = options
         self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
 
     async def execute_request(
@@ -29,8 +30,14 @@ class OpenAiAsrClient(ContinuumAsrClient):
         streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
     ) -> ContinuumAsrResponse:
         """Transcribe audio data to text using OpenAI."""
+        model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI_ASR
+        language = none_if_empty(request.language) or Omit()
+
+        self._logger.info(f"Starting ASR request ({model_name}) for session_id: {request.session_id}")
         with open(request.audio_path, "rb") as audio_file:
-            events = self._client.audio.transcriptions.create(model="gpt-4o-transcribe", file=audio_file, stream=True)
+            events = self._client.audio.transcriptions.create(
+                file=audio_file, model=model_name, stream=True, language=language
+            )
 
         done_event: Optional[TranscriptionTextDoneEvent] = None
         for event in events:

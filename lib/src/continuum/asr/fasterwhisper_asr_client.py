@@ -11,6 +11,7 @@ from continuum.asr.models import (
     FasterWhisperAsrOptions,
     ContinuumAsrStreamingResponse,
 )
+from continuum.constants import DEFAULT_MODEL_NAME_FASTERWHISPER
 from continuum.utils import none_if_empty
 
 
@@ -20,8 +21,10 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
     def __init__(self, options: FasterWhisperAsrOptions = FasterWhisperAsrOptions()) -> None:
         """Initialize the Faster Whisper ASR client."""
         self._logger = logging.getLogger(__name__)
+
+        model_name = none_if_empty(options.model_name) or DEFAULT_MODEL_NAME_FASTERWHISPER
         self._model = WhisperModel(
-            model_size_or_path=options.model_size_or_path,
+            model_size_or_path=model_name,
             device=options.device,
             download_root=none_if_empty(options.download_root),
         )
@@ -41,10 +44,9 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
         """Transcribe audio data to text using Faster Whisper."""
         segments: Iterable[Segment]
         info: TranscriptionInfo
-        segments, info = self._model.transcribe(request.audio_path)
-        self._logger.info(f"Language: {info.language} (confidence: {info.language_probability:.2f})")
+        segments, info = self._model.transcribe(audio=request.audio_path, language=none_if_empty(request.language))
 
-        # Process segments and stream intermediate results
+        # Process the stream
         outputs: List[Segment] = []
         for segment in segments:
             outputs.append(segment)
