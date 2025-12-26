@@ -3,7 +3,7 @@ from typing import Sequence, AsyncIterator, Optional, Callable
 
 from ollama import AsyncClient, Message, ChatResponse
 
-from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.constants import ERROR_CODE_UNEXPECTED, DEFAULT_MODEL_NAME_OLLAMA
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import (
     ContinuumLlmResponse,
@@ -11,6 +11,7 @@ from continuum.llm.models import (
     ContinuumLlmStreamingResponse,
     OllamaLlmOptions,
 )
+from continuum.utils import none_if_empty
 
 
 class OllamaLlmClient(ContinuumLlmClient):
@@ -19,6 +20,7 @@ class OllamaLlmClient(ContinuumLlmClient):
     def __init__(self, options: OllamaLlmOptions = OllamaLlmOptions()) -> None:
         """Initialize the fake LLM client."""
         self._logger = logging.getLogger(__name__)
+        self._options = options
         self._client = AsyncClient(host=options.host)
         self._logger.info("Ollama LLM client initialized.")
 
@@ -28,14 +30,12 @@ class OllamaLlmClient(ContinuumLlmClient):
         streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
-        self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
+        model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OLLAMA
 
-        model: str = "mistral-small"
+        self._logger.info(f"Starting LLM request ({model_name}) for session_id: {request.session_id}")
         inputs: Sequence[Message] = [Message(role="user", content=request.content_text)]
-        stream: bool = True
-        think: bool = False
         results: ChatResponse | AsyncIterator[ChatResponse] = await self._client.chat(
-            model=model, messages=inputs, stream=stream, think=think
+            model=model_name, messages=inputs, stream=True, think=False
         )
 
         outputs: list[ChatResponse] = []

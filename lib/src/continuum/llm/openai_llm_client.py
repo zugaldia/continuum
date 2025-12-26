@@ -14,7 +14,7 @@ from openai.types.responses import (
     ResponseTextDoneEvent,
 )
 
-from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.constants import ERROR_CODE_UNEXPECTED, DEFAULT_MODEL_NAME_OPENAI
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import (
     ContinuumLlmResponse,
@@ -31,6 +31,7 @@ class OpenAiLlmClient(ContinuumLlmClient):
     def __init__(self, options: OpenAiLlmOptions = OpenAiLlmOptions()) -> None:
         """Initialize the OpenAI LLM client."""
         self._logger = logging.getLogger(__name__)
+        self._options = options
         self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
         self._logger.info("OpenAI LLM client initialized.")
 
@@ -40,17 +41,13 @@ class OpenAiLlmClient(ContinuumLlmClient):
         streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
-        self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
+        model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI
 
+        self._logger.info(f"Starting LLM request ({model_name}) for session_id: {request.session_id}")
         events = self._client.responses.create(
-            model="gpt-5.2",
+            model=model_name,
             reasoning={"effort": "none"},
-            input=[
-                {
-                    "role": "user",
-                    "content": request.content_text,
-                },
-            ],
+            input=[{"role": "user", "content": request.content_text}],
             stream=True,
         )
 

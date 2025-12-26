@@ -4,7 +4,7 @@ from typing import Optional, Callable, Iterator, List
 from google import genai
 from google.genai import types
 
-from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.constants import ERROR_CODE_UNEXPECTED, DEFAULT_MODEL_NAME_GOOGLE
 from continuum.llm.llm_client import ContinuumLlmClient
 from continuum.llm.models import (
     ContinuumLlmResponse,
@@ -21,6 +21,7 @@ class GoogleLlmClient(ContinuumLlmClient):
     def __init__(self, options: GoogleLlmOptions = GoogleLlmOptions()) -> None:
         """Initialize the Google LLM client."""
         self._logger = logging.getLogger(__name__)
+        self._options = options
         self._client = genai.Client(api_key=none_if_empty(options.api_key))
         self._logger.info("Google LLM client initialized.")
 
@@ -30,10 +31,11 @@ class GoogleLlmClient(ContinuumLlmClient):
         streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
-        self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
+        model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_GOOGLE
 
+        self._logger.info(f"Starting LLM request ({model_name}) for session_id: {request.session_id}")
         events: Iterator[types.GenerateContentResponse] = self._client.models.generate_content_stream(
-            model="gemini-3-flash-preview",
+            model=model_name,
             contents=[request.content_text],
             config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_level="minimal")),
         )
