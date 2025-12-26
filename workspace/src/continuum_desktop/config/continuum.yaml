@@ -9,13 +9,14 @@
 # FasterWhisper ASR node
 /continuum/asr/fasterwhisper/fasterwhisper_asr:
   ros__parameters:
-    model_size_or_path: "medium"
+    model_name: "medium"
     device: "auto"
     download_root: ""
 
 # OpenAI ASR node
 /continuum/asr/openai/openai_asr:
   ros__parameters:
+    model_name: "gpt-4o-transcribe"
     api_key: ""
     base_url: ""
 
@@ -23,17 +24,20 @@
 /continuum/llm/ollama/ollama_llm:
   ros__parameters:
     host: "http://localhost:11434"
+    model_name: "gemma3"
 
 # OpenAI LLM node
 /continuum/llm/openai/openai_llm:
   ros__parameters:
     api_key: ""
     base_url: ""
+    model_name: "gpt-5.2"
 
 # Google LLM node
 /continuum/llm/google/google_llm:
   ros__parameters:
     api_key: ""
+    model_name: "gemini-3-flash-preview"
 
 # Dictation app node - local profile
 /continuum/app/dictation/local/dictation_app_local:
