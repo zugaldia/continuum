@@ -30,6 +30,7 @@ from continuum.constants import (
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
+    PROFILE_LOCAL,
     TOPIC_ASR_REQUEST,
     TOPIC_ASR_RESPONSE,
     TOPIC_ASR_STREAMING_RESPONSE,
@@ -237,17 +238,19 @@ class ContinuumClient:
         message_type = "continuum_interfaces/LlmStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumLlmStreamingResponse)
 
-    def subscribe_dictation_response(self, callback: Callable[[ContinuumDictationResponse], None]) -> None:
-        """Subscribe to the dictation response topic."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{TOPIC_DICTATION_RESPONSE}"
+    def subscribe_dictation_response(
+        self, callback: Callable[[ContinuumDictationResponse], None], profile: str = PROFILE_LOCAL
+    ) -> None:
+        """Subscribe to the dictation response topic for the specified profile."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_RESPONSE}"
         message_type = "continuum_interfaces/DictationResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumDictationResponse)
 
     def subscribe_dictation_streaming_response(
-        self, callback: Callable[[ContinuumDictationStreamingResponse], None]
+        self, callback: Callable[[ContinuumDictationStreamingResponse], None], profile: str = PROFILE_LOCAL
     ) -> None:
-        """Subscribe to the dictation streaming response topic."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{TOPIC_DICTATION_STREAMING_RESPONSE}"
+        """Subscribe to the dictation streaming response topic for the specified profile."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_STREAMING_RESPONSE}"
         message_type = "continuum_interfaces/DictationStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumDictationStreamingResponse)
 
@@ -291,9 +294,9 @@ class ContinuumClient:
         self._publish_message(name, message_type, message)
         return None
 
-    def publish_dictation_request(self, request: ContinuumDictationRequest) -> None:
-        """Publish a dictation request to the dictation app."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{TOPIC_DICTATION_REQUEST}"
+    def publish_dictation_request(self, request: ContinuumDictationRequest, profile: str = PROFILE_LOCAL) -> None:
+        """Publish a dictation request to the dictation app for the specified profile."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_REQUEST}"
         message_type = "continuum_interfaces/DictationRequest"
         message = roslibpy.Message(request.model_dump())
         self._publish_message(name, message_type, message)
