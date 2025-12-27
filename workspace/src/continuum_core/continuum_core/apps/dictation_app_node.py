@@ -7,7 +7,9 @@ the ContinuumClient execute_request function to kickstart/orchestrate the nodes 
 
 from concurrent.futures import Future
 from typing import Any, Optional, Callable
+import time
 
+from pydantic import BaseModel
 import rclpy
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
@@ -60,6 +62,14 @@ from continuum_interfaces.msg import (
 )
 
 
+class SessionState(BaseModel):
+    """Tracks the state and timing information for a dictation session."""
+
+    request: ContinuumDictationRequest
+    start_time: float
+    asr_complete_time: Optional[float] = None
+
+
 class DictationAppNode(BaseAppNode, ContinuumClient):
     _asr_publisher: Publisher[AsrRequest]
     _llm_publisher: Publisher[LlmRequest]
@@ -67,7 +77,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     _app_streaming_publisher: Publisher[DictationStreamingResponse]
     _asr_node: str
     _llm_node: str
-    _session_requests: dict[str, ContinuumDictationRequest]
+    _session_state: dict[str, SessionState]
 
     def __init__(self):
         super().__init__("dictation_app_node")
@@ -77,7 +87,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         self._client = self
-        self._session_requests = {}
+        self._session_state = {}
         self.get_logger().info(f"Dictation app node initialized with {self._asr_node}/{self._llm_node}.")
 
     #
@@ -146,10 +156,12 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
     ) -> ContinuumDictationResponse:
         self._logger.info(f"Starting dictation request for session_id: {request.session_id}")
         self.add_active_session(request.session_id)
-        self._session_requests[request.session_id] = request
+        self._session_state[request.session_id] = SessionState(request=request, start_time=time.time())
         self._asr_publisher.publish(
             AsrRequest(session_id=request.session_id, audio_path=request.audio_path, language=request.language)
         )
+
+        # Publish (queued) update to consumers
         return ContinuumDictationResponse(session_id=request.session_id, status=DICTATION_STATUS_QUEUED)
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
@@ -158,11 +170,14 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         if not self.has_active_session(msg.session_id):
             return
 
-        # Retrieve the original request
-        original_request = self._session_requests.get(msg.session_id)
-        if original_request is None:
-            self.get_logger().error(f"No stored request found for session_id: {msg.session_id}")
+        # Retrieve the session state
+        session_state = self._session_state.get(msg.session_id)
+        if session_state is None:
+            self.get_logger().error(f"No stored session state found for session_id: {msg.session_id}")
             return
+
+        # Record ASR completion time
+        session_state.asr_complete_time = time.time()
 
         # Check if the ASR response contains an error
         if msg.error_code != ERROR_CODE_SUCCESS:
@@ -200,7 +215,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         )
 
         # Request final pass by the LLM, using context from the original request
-        context = none_if_empty(original_request.context) or DEFAULT_CONTEXT
+        context = none_if_empty(session_state.request.context) or DEFAULT_CONTEXT
         content_text = DICTATION_PROMPT.format(CONTEXT=context, INPUT=transcription.strip())
         llm_request = LlmRequest(session_id=msg.session_id, content_text=content_text)
         self._llm_publisher.publish(llm_request)
@@ -220,7 +235,27 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         if not self.has_active_session(msg.session_id):
             return
 
-        # Check if the LLM response contains an error
+        # Retrieve the session state to calculate time stats
+        session_state = self._session_state.get(msg.session_id)
+        if session_state is None:
+            self.get_logger().error(f"No stored session state found for session_id: {msg.session_id}")
+            return
+
+        # Total duration
+        end_time = time.time()
+        total_duration = end_time - session_state.start_time
+
+        # ASR duration
+        asr_duration = 0.0
+        if session_state.asr_complete_time is not None:
+            asr_duration = session_state.asr_complete_time - session_state.start_time
+
+        # LLM duration
+        llm_duration = 0.0
+        if session_state.asr_complete_time is not None:
+            llm_duration = end_time - session_state.asr_complete_time
+
+        # Publish the final response
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"LLM error received: {msg.error_message}")
             self.publish_app_response(
@@ -228,12 +263,24 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
                     session_id=msg.session_id,
                     error_code=msg.error_code,
                     error_message=msg.error_message,
+                    asr_node=self._asr_node,
+                    llm_node=self._llm_node,
+                    asr_duration_seconds=asr_duration,
+                    llm_duration_seconds=llm_duration,
+                    total_duration_seconds=total_duration,
                 )
             )
         else:
             self.publish_app_response(
                 ContinuumDictationResponse(
-                    session_id=msg.session_id, content_text=msg.content_text, status=DICTATION_STATUS_COMPLETED
+                    session_id=msg.session_id,
+                    content_text=msg.content_text,
+                    status=DICTATION_STATUS_COMPLETED,
+                    asr_node=self._asr_node,
+                    llm_node=self._llm_node,
+                    asr_duration_seconds=asr_duration,
+                    llm_duration_seconds=llm_duration,
+                    total_duration_seconds=total_duration,
                 )
             )
 
@@ -282,7 +329,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
 
     def _cleanup_session(self, session_id: str) -> None:
         """Clean up session state and tracking."""
-        self._session_requests.pop(session_id, None)
+        self._session_state.pop(session_id, None)
         self.remove_active_session(session_id)
 
     def publish_app_response(self, sdk_response: ContinuumDictationResponse) -> None:
