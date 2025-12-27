@@ -29,6 +29,8 @@ setup(
             # Health nodes
             "heartbeat_node = continuum_core.health.heartbeat_node:main",
             "echo_node = continuum_core.health.echo_node:main",
+            # Joystick nodes
+            "joystick_node = continuum_core.input.joystick_node:main",
             # ASR nodes
             "fake_asr_node = continuum_core.asr.fake_asr_node:main",
             "fasterwhisper_asr_node = continuum_core.asr.fasterwhisper_asr_node:main",

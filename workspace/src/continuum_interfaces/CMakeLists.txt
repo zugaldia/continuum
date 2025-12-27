@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Generate interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -20,6 +21,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DictationRequest.msg"
   "msg/DictationResponse.msg"
   "msg/DictationStreamingResponse.msg"
+  "msg/JoystickButtonEvent.msg"
+  "msg/JoystickAxisEvent.msg"
+  DEPENDENCIES std_msgs
 )
 
 if(BUILD_TESTING)

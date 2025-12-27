@@ -43,7 +43,6 @@ def generate_launch_description():
     """Launch all core package nodes for the desktop application."""
 
     config_file_arg, parameters = get_config_file_argument()
-
     return LaunchDescription(
         [
             # Config launch argument
@@ -60,6 +59,21 @@ def generate_launch_description():
                 package="continuum_core",
                 executable="echo_node",
                 name="echo",
+                namespace=CONTINUUM_NAMESPACE,
+                parameters=parameters,
+            ),
+            # Joystick nodes
+            Node(
+                package="joy",
+                executable="joy_node",
+                name="joy",
+                namespace=CONTINUUM_NAMESPACE,
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="joystick_node",
+                name="joystick",
                 namespace=CONTINUUM_NAMESPACE,
                 parameters=parameters,
             ),

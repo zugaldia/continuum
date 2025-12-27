@@ -15,6 +15,7 @@ in the ASR models.
 """
 
 from abc import abstractmethod, ABC
+from enum import Enum
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -70,3 +71,42 @@ class ContinuumClient(ABC):
 
     def shutdown(self):
         pass
+
+
+#
+# Joysticks
+#
+
+
+class JoystickButtonState(Enum):
+    PRESSED = "PRESSED"
+    RELEASED = "RELEASED"
+
+
+class JoystickButton(Enum):
+    BUTTON_A = "BUTTON_A"
+    BUTTON_B = "BUTTON_B"
+    BUTTON_X = "BUTTON_X"
+    BUTTON_Y = "BUTTON_Y"
+    BUTTON_L = "BUTTON_L"
+    BUTTON_R = "BUTTON_R"
+    BUTTON_SELECT = "BUTTON_SELECT"
+    BUTTON_START = "BUTTON_START"
+    BUTTON_HOME = "BUTTON_HOME"
+
+
+class JoystickAxisState(Enum):
+    PRESSED = "PRESSED"
+    RELEASED = "RELEASED"
+
+
+class JoystickAxisDirection(Enum):
+    LEFT_RIGHT = "LEFT_RIGHT"
+    UP_DOWN = "UP_DOWN"
+
+
+class JoystickAxis(Enum):
+    AXIS_LEFT = "AXIS_LEFT"
+    AXIS_RIGHT = "AXIS_RIGHT"
+    AXIS_UP = "AXIS_UP"
+    AXIS_DOWN = "AXIS_DOWN"

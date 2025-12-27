@@ -6,6 +6,18 @@
   ros__parameters:
     debug_mode: false
 
+# Joystick node
+/continuum/joy:
+  ros__parameters:
+    # Use `ros2 run joy joy_enumerate_devices` for valid values
+    # https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy#parameters
+    device_id: 0
+    # Rate in Hz at which a joystick that has a non-changing state will
+    # resend the previously sent message. If set to 0.0, autorepeat will
+    # be disabled, meaning joy messages will only be published when the
+    # joystick changes.
+    autorepeat_rate: 0.0
+
 # FasterWhisper ASR node
 /continuum/asr/fasterwhisper/fasterwhisper_asr:
   ros__parameters:
