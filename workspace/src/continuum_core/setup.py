@@ -42,6 +42,8 @@ setup(
             "google_llm_node = continuum_core.llm.google_llm_node:main",
             # App nodes
             "dictation_app_node = continuum_core.apps.dictation_app_node:main",
+            # Reachy
+            "reachy_node = continuum_core.reachy.reachy_node:main",
         ],
     },
 )
