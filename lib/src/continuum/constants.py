@@ -4,6 +4,7 @@ SDK_NAME = "Continuum SDK"
 SDK_VERSION = "0.1.0"
 
 CONTINUUM_NAMESPACE = "continuum"
+PATH_INPUT = "input"
 PATH_ASR = "asr"
 PATH_LLM = "llm"
 PATH_APP = "app"

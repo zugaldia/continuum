@@ -17,6 +17,7 @@ from continuum.constants import (
     PATH_LLM,
     PROFILE_LOCAL,
     PROFILE_CLOUD,
+    PATH_INPUT,
 )
 
 
@@ -67,14 +68,14 @@ def generate_launch_description():
                 package="joy",
                 executable="joy_node",
                 name="joy",
-                namespace=CONTINUUM_NAMESPACE,
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_INPUT}",
                 parameters=parameters,
             ),
             Node(
                 package="continuum_core",
                 executable="joystick_node",
                 name="joystick",
-                namespace=CONTINUUM_NAMESPACE,
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_INPUT}",
                 parameters=parameters,
             ),
             # ASR nodes

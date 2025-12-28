@@ -7,7 +7,7 @@
     debug_mode: false
 
 # Joystick node
-/continuum/joy:
+/continuum/input/joy:
   ros__parameters:
     # Use `ros2 run joy joy_enumerate_devices` for valid values
     # https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy#parameters

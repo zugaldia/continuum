@@ -9,6 +9,7 @@ from continuum.constants import (
     TOPIC_JOYSTICK_BUTTON_EVENT,
     TOPIC_JOYSTICK_AXIS_EVENT,
     CONTINUUM_NAMESPACE,
+    PATH_INPUT,
 )
 from continuum.models import JoystickButton, JoystickAxisDirection, JoystickAxis, JoystickAxisState, JoystickButtonState
 from continuum_core.shared.base_node import BaseNode
@@ -63,7 +64,7 @@ class JoystickNode(BaseNode):
 
     def register_subscribers(self) -> None:
         """Register the subscriber for Joy events."""
-        self.create_subscription(Joy, f"/{CONTINUUM_NAMESPACE}/joy", self._joy_callback, QOS_DEPTH_DEFAULT)
+        self.create_subscription(Joy, f"/{CONTINUUM_NAMESPACE}/{PATH_INPUT}/joy", self._joy_callback, QOS_DEPTH_DEFAULT)
 
     def on_shutdown(self) -> None:
         """Clean up joystick node resources."""
