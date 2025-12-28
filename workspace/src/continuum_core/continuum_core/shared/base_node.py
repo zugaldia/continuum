@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Sequence
 
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
@@ -12,6 +13,7 @@ from continuum.constants import (
     PARAM_NODE_NAME,
     PARAM_NODE_NAME_DEFAULT,
 )
+from continuum_core.shared import RosLogHandler
 
 
 class BaseNode(Node):
@@ -19,6 +21,14 @@ class BaseNode(Node):
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
+
+        # Forward Python logging to the ROS logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        ros_handler = RosLogHandler(self.get_logger())
+        ros_handler.setFormatter(logging.Formatter("[%(name)s] %(message)s"))
+        root_logger.addHandler(ros_handler)
+
         self.register_parameters()
         self.register_publishers()
         self.register_subscribers()
