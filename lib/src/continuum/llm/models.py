@@ -4,6 +4,8 @@ from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStrea
 
 
 class ContinuumLlmRequest(ContinuumRequest):
+    state_id: str = ""
+    system_prompt: str = ""
     content_text: str
 
 
@@ -16,6 +18,7 @@ class ContinuumLlmRequest(ContinuumRequest):
 
 
 class ContinuumLlmResponse(ContinuumResponse):
+    state_id: str = ""
     content_text: str = ""
     done_reason: str = ""
 

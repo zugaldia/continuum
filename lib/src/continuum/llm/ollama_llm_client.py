@@ -11,7 +11,7 @@ from continuum.llm.models import (
     ContinuumLlmStreamingResponse,
     OllamaLlmOptions,
 )
-from continuum.utils import none_if_empty
+from continuum.utils import none_if_empty, generate_unique_id
 
 
 class OllamaLlmClient(ContinuumLlmClient):
@@ -58,13 +58,20 @@ class OllamaLlmClient(ContinuumLlmClient):
 
         content_text = "".join([output.message.content for output in outputs])
         done_reason = outputs[-1].done_reason
+
+        # Generate a state_id for conversation tracking
+        # Note: Ollama doesn't have a built-in conversation state like OpenAI/Google,
+        # so we generate a UUID to maintain consistency with other providers
+        state_id = generate_unique_id()
+
         response = ContinuumLlmResponse(
             session_id=request.session_id,
+            state_id=state_id,
             content_text=content_text,
             done_reason=done_reason,
         )
 
-        self._logger.info(f"LLM completed for session_id: {request.session_id}")
+        self._logger.info(f"LLM completed for session_id: {request.session_id}, state_id: {state_id}")
         return response
 
     def shutdown(self) -> None:

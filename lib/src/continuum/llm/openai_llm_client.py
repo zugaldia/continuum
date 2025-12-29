@@ -1,7 +1,8 @@
 import logging
 from typing import Optional, Callable
 
-from openai import OpenAI
+from openai import OpenAI, Omit
+from openai.types import Reasoning
 from openai.types.responses import (
     ResponseCompletedEvent,
     ResponseContentPartAddedEvent,
@@ -12,6 +13,7 @@ from openai.types.responses import (
     ResponseOutputItemDoneEvent,
     ResponseTextDeltaEvent,
     ResponseTextDoneEvent,
+    EasyInputMessageParam,
 )
 
 from continuum.constants import ERROR_CODE_UNEXPECTED, DEFAULT_MODEL_NAME_OPENAI
@@ -22,7 +24,7 @@ from continuum.llm.models import (
     ContinuumLlmStreamingResponse,
     OpenAiLlmOptions,
 )
-from continuum.utils import none_if_empty
+from continuum.utils import none_if_empty, is_empty
 
 
 class OpenAiLlmClient(ContinuumLlmClient):
@@ -42,12 +44,17 @@ class OpenAiLlmClient(ContinuumLlmClient):
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI
+        previous_response_id = none_if_empty(request.state_id) or Omit()
+        stateful = none_if_empty(request.state_id) is not None
 
-        self._logger.info(f"Starting LLM request ({model_name}) for session_id: {request.session_id}")
+        instructions = Omit() if is_empty(request.system_prompt) else request.system_prompt
+        self._logger.info(f"New LLM request ({model_name}) for session_id (stateful={stateful}): {request.session_id}")
         events = self._client.responses.create(
             model=model_name,
-            reasoning={"effort": "none"},
-            input=[{"role": "user", "content": request.content_text}],
+            instructions=instructions,
+            previous_response_id=previous_response_id,
+            reasoning=Reasoning(effort="none"),
+            input=[EasyInputMessageParam(role="user", content=request.content_text)],
             stream=True,
         )
 
@@ -91,8 +98,10 @@ class OpenAiLlmClient(ContinuumLlmClient):
         if completed_event:
             content_text = completed_event.response.output[0].content[0].text
             done_reason = completed_event.response.status
+            response_id = completed_event.response.id
             return ContinuumLlmResponse(
                 session_id=request.session_id,
+                state_id=response_id,
                 content_text=content_text,
                 done_reason=done_reason,
             )
