@@ -62,3 +62,11 @@
   ros__parameters:
     asr_node: "openai"
     llm_node: "google"
+
+# Reachy
+/continuum/hardware/reachy/reachy:
+  ros__parameters:
+    asr_node: "fasterwhisper"
+    tts_node: "kokoro"
+    llm_node: "ollama"
+    system_prompt_path: ""

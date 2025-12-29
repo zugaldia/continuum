@@ -12,9 +12,11 @@ from continuum.constants import (
     NODE_LLM_OLLAMA,
     NODE_LLM_OPENAI,
     NODE_LLM_GOOGLE,
+    NODE_TTS_KOKORO,
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
+    PATH_TTS,
     PROFILE_LOCAL,
     PROFILE_CLOUD,
     PATH_INPUT,
@@ -113,6 +115,14 @@ def generate_launch_description():
                 executable="google_llm_node",
                 name="google_llm",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_LLM}/{NODE_LLM_GOOGLE}",
+                parameters=parameters,
+            ),
+            # TTS nodes
+            Node(
+                package="continuum_core",
+                executable="kokoro_tts_node",
+                name="kokoro_tts",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_TTS}/{NODE_TTS_KOKORO}",
                 parameters=parameters,
             ),
             # App nodes
