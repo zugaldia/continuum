@@ -1,18 +1,13 @@
-import asyncio
-import random
-from collections import deque
-from concurrent.futures import Future
-from typing import Optional, Deque
+from pathlib import Path
+from time import time
+from typing import Optional
 
-import cv2
-import numpy as np
-import numpy.typing as npt
 import rclpy
-import soundfile as sf
+from pydantic import BaseModel
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
-from rclpy.timer import Timer
+from rclpy.publisher import Publisher
 from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMove, RecordedMoves
 
 from continuum.constants import (
     QOS_DEPTH_DEFAULT,
@@ -20,108 +15,145 @@ from continuum.constants import (
     PATH_INPUT,
     TOPIC_JOYSTICK_BUTTON_EVENT,
     TOPIC_JOYSTICK_AXIS_EVENT,
+    PARAM_ASR_NODE,
+    PARAM_ASR_NODE_DEFAULT,
+    PARAM_TTS_NODE,
+    PARAM_TTS_NODE_DEFAULT,
+    PARAM_LLM_NODE,
+    PARAM_LLM_NODE_DEFAULT,
+    PARAM_SYSTEM_PROMPT_PATH,
+    PARAM_SYSTEM_PROMPT_PATH_DEFAULT,
+    PATH_ASR,
+    PATH_TTS,
+    PATH_LLM,
+    TOPIC_LLM_REQUEST,
+    TOPIC_ASR_REQUEST,
+    TOPIC_ASR_RESPONSE,
+    TOPIC_TTS_REQUEST,
+    TOPIC_TTS_RESPONSE,
+    TOPIC_LLM_RESPONSE,
+    ERROR_CODE_SUCCESS,
 )
 from continuum.models import JoystickAxis, JoystickButton
+from continuum.utils import generate_unique_id, none_if_empty, strip_markdown, is_empty
+from continuum_core.reachy.prompts import SYSTEM_PROMPT
+from continuum_core.reachy.reachy_listens import ReachyListens
+from continuum_core.reachy.reachy_moves import ReachyMoves
+from continuum_core.reachy.reachy_sees import ReachySees
+from continuum_core.reachy.reachy_speaks import ReachySpeaks
 from continuum_core.shared.async_node import AsyncNode
-from continuum_core.shared.utils import create_timestamped_filename
-from continuum_interfaces.msg import JoystickButtonEvent, JoystickAxisEvent
-
-# Predefined emotions and dances
-REACHY_EMOTIONS_REPO_ID = "pollen-robotics/reachy-mini-emotions-library"
-REACHY_DANCES_REPO_ID = "pollen-robotics/reachy-mini-dances-library"
+from continuum_interfaces.msg import (
+    JoystickButtonEvent,
+    JoystickAxisEvent,
+    AsrRequest,
+    TtsRequest,
+    LlmRequest,
+    AsrResponse,
+    TtsResponse,
+    LlmResponse,
+)
 
 # Connection configuration
 REACHY_CONNECTION_RETRIES = 3
 
-# Audio recording configuration (poll every 10ms to capture samples)
-# Reachy produces ~20ms audio chunks, so poll at least 2x that rate
-AUDIO_POLL_PERIOD_SECONDS = 0.01
 
-# Audio playback configuration
-AUDIO_PLAYBACK_CHUNK_SIZE = 1024
+class ReachyState(BaseModel):
+    """Tracks the state for Reachy."""
 
-# Audio buffer configuration - keep the last minute of audio
-# Reachy produces ~20ms chunks, approximately 50 chunks per second
-# 60 seconds × 50 chunks/second = 3000 chunks
-AUDIO_BUFFER_MAX_SIZE = 3_000
+    active_session_id: Optional[str] = None
+    state_id: Optional[str] = None  # LLM memory
+    recording_stop_time: Optional[float] = None
 
 
 class ReachyNode(AsyncNode):
+    _asr_publisher: Publisher[AsrRequest]
+    _tts_publisher: Publisher[TtsRequest]
+    _llm_publisher: Publisher[LlmRequest]
+    _asr_node: str
+    _tts_node: str
+    _llm_node: str
+    _system_prompt_path: str
+
     def __init__(self) -> None:
         super().__init__("reachy_node")
         self.set_node_info(name="Reachy Node", description="Support for Pollen Robotics / Hugging Face Reachy Mini")
-
-        self._is_moving = False
-        self._is_recording = False
-        self._is_talking = False
+        self._state = ReachyState()
         self._mini: Optional[ReachyMini] = None
-        self._listening_timer: Optional[Timer] = None
-        self._playback_timer: Optional[Timer] = None
-        self._audio_buffer: Deque[npt.NDArray[np.float32]] = deque(maxlen=AUDIO_BUFFER_MAX_SIZE)
 
-        self._recorded_emotions = RecordedMoves(REACHY_EMOTIONS_REPO_ID)
-        emotions_ids = self._recorded_emotions.list_moves()
-        self.get_logger().info(f"Recorded emotions ({len(emotions_ids)}): {emotions_ids}")
+        self._reachy_moves = ReachyMoves(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
+        self._reachy_listens = ReachyListens(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
+        self._reachy_sees = ReachySees(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
+        self._reachy_speaks = ReachySpeaks(
+            node=self, core_loop=self._core_loop, get_mini=self._get_mini, on_queue_empty=self._on_tts_queue_empty
+        )
 
-        self._recorded_dances = RecordedMoves(REACHY_DANCES_REPO_ID)
-        dances_ids = self._recorded_dances.list_moves()
-        self.get_logger().info(f"Recorded dances ({len(dances_ids)}): {dances_ids}")
+        if self.debug_mode:
+            for emotion_id in self._reachy_moves.recorded_emotions.list_moves():
+                description = self._reachy_moves.recorded_emotions.get(emotion_id).description
+                self.get_logger().info(f"- Emotion: {emotion_id}: {description}")
+            for dance_id in self._reachy_moves.recorded_dances.list_moves():
+                description = self._reachy_moves.recorded_dances.get(dance_id).description
+                self.get_logger().info(f"- Dance: {dance_id}: {description}")
 
         self.get_logger().info("Reachy node initialized.")
 
-    def _connect(self) -> None:
-        if self._mini:
-            self.get_logger().warning("Reachy Mini already connected.")
-            return
+    def _get_mini(self) -> Optional[ReachyMini]:
+        """Get the Reachy Mini instance."""
+        return self._mini
 
-        for attempt in range(1, REACHY_CONNECTION_RETRIES + 1):
-            try:
-                # Allow connecting to Reachy Mini on the local network
-                self.get_logger().info(f"Connecting to Reachy Mini (attempt {attempt}/{REACHY_CONNECTION_RETRIES}).")
-                self._mini = ReachyMini(localhost_only=False)
-                self.get_logger().info("Reachy Mini connected.")
-                self._start_listening_timer()
-                return
-            except Exception as e:
-                if attempt < REACHY_CONNECTION_RETRIES:
-                    self.get_logger().warning(f"Connection attempt {attempt} failed: {e}. Retrying.")
-                else:
-                    self.get_logger().error(
-                        f"Failed to connect to Reachy Mini after {REACHY_CONNECTION_RETRIES} attempts: {e}"
-                    )
+    def _load_system_prompt(self) -> str:
+        """Load the system prompt from a file or use default."""
+        if is_empty(self._system_prompt_path):
+            self.get_logger().info("Using default system prompt")
+            return SYSTEM_PROMPT
 
-    def _disconnect(self) -> None:
-        self._stop_listening_timer()  # Stop the listening timer regardless of Mini connectivity state
-        if not self._mini:
-            self.get_logger().warning("Reachy Mini not connected.")
-            return
         try:
-            self.get_logger().info("Disconnecting from Reachy Mini.")
-            self._mini.__exit__(None, None, None)
-            self._mini = None
-            self.get_logger().info("Reachy Mini disconnected.")
+            # We need to start caching this content
+            prompt_path = Path(self._system_prompt_path)
+            self.get_logger().info(f"Loading system prompt from: {prompt_path}")
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt = f.read().strip()
+            return prompt
         except Exception as e:
-            self.get_logger().error(f"Error disconnecting Reachy Mini: {e}")
+            self.get_logger().error(f"Error loading system prompt from {self._system_prompt_path}: {e}")
+            return SYSTEM_PROMPT
 
-    def _start_listening_timer(self) -> None:
-        self.get_logger().info("Starting audio recording timer.")
-        self._listening_timer = self.create_timer(AUDIO_POLL_PERIOD_SECONDS, self._poll_audio_sample)
+    def register_parameters(self) -> None:
+        """Register the dictation app parameters."""
+        super().register_parameters()
+        self.declare_parameter(
+            PARAM_ASR_NODE, PARAM_ASR_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_TTS_NODE, PARAM_TTS_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_LLM_NODE, PARAM_LLM_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
+            PARAM_SYSTEM_PROMPT_PATH,
+            PARAM_SYSTEM_PROMPT_PATH_DEFAULT,
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
+        )
 
-    def _stop_listening_timer(self) -> None:
-        self.get_logger().info("Stopping audio recording timer.")
-        if self._listening_timer is not None:
-            self._listening_timer.cancel()
-            self._listening_timer = None
+        # Set node names before registering any publishers/subscribers
+        self._asr_node = self._get_str_param(PARAM_ASR_NODE)
+        self._tts_node = self._get_str_param(PARAM_TTS_NODE)
+        self._llm_node = self._get_str_param(PARAM_LLM_NODE)
+        self._system_prompt_path = self._get_str_param(PARAM_SYSTEM_PROMPT_PATH)
 
-    def _poll_audio_sample(self) -> None:
-        if self._mini is None:
-            return
-        try:
-            sample: npt.NDArray[np.float32] = self._mini.media.get_audio_sample()
-            if sample is not None:
-                self._audio_buffer.append(sample)
-        except Exception as e:
-            self.get_logger().error(f"Failed to get audio sample: {e}")
+    def register_publishers(self) -> None:
+        # Ability to issue ASR requests
+        topic_asr_request = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_REQUEST}"
+        self._asr_publisher = self.create_publisher(AsrRequest, topic_asr_request, QOS_DEPTH_DEFAULT)
+
+        # Ability to issue TTS requests
+        topic_tts_request = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{self._tts_node}/{TOPIC_TTS_REQUEST}"
+        self._tts_publisher = self.create_publisher(TtsRequest, topic_tts_request, QOS_DEPTH_DEFAULT)
+
+        # Ability to issue LLM requests
+        topic_llm_request = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_REQUEST}"
+        self._llm_publisher = self.create_publisher(LlmRequest, topic_llm_request, QOS_DEPTH_DEFAULT)
 
     def register_subscribers(self) -> None:
         """Register the reachy request subscriber."""
@@ -138,160 +170,189 @@ class ReachyNode(AsyncNode):
             QOS_DEPTH_DEFAULT,
         )
 
+        # Listen to ASR responses
+        topic_asr_response = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_RESPONSE}"
+        self.create_subscription(AsrResponse, topic_asr_response, self._on_asr_response, QOS_DEPTH_DEFAULT)
+
+        # Listen to TTS responses
+        topic_tts_response = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{self._tts_node}/{TOPIC_TTS_RESPONSE}"
+        self.create_subscription(TtsResponse, topic_tts_response, self._on_tts_response, QOS_DEPTH_DEFAULT)
+
+        # Listen to LLM responses
+        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_RESPONSE}"
+        self.create_subscription(LlmResponse, topic_llm_response, self._on_llm_response, QOS_DEPTH_DEFAULT)
+
+    def _connect(self) -> None:
+        if self._mini:
+            self.get_logger().warning("Reachy Mini already connected.")
+            return
+
+        for attempt in range(1, REACHY_CONNECTION_RETRIES + 1):
+            try:
+                # Allow connecting to Reachy Mini on the local network
+                self.get_logger().info(f"Connecting to Reachy Mini (attempt {attempt}/{REACHY_CONNECTION_RETRIES}).")
+                self._mini = ReachyMini(localhost_only=False)
+                self.get_logger().info("Reachy Mini connected.")
+                self._reachy_listens.start_listening_timer()
+                self._reachy_moves.start_movement_timer()
+                return
+            except Exception as e:
+                if attempt < REACHY_CONNECTION_RETRIES:
+                    self.get_logger().warning(f"Connection attempt {attempt} failed: {e}. Retrying.")
+                else:
+                    self.get_logger().error(
+                        f"Failed to connect to Reachy Mini after {REACHY_CONNECTION_RETRIES} attempts: {e}"
+                    )
+
+    def _disconnect(self) -> None:
+        # Do these regardless of Reachy connectivity state
+        self._reachy_listens.stop_listening_timer()
+        self._reachy_moves.stop_movement_timer()
+        self._reachy_speaks.clear_tts_queue()
+
+        if not self._mini:
+            self.get_logger().warning("Reachy Mini not connected.")
+            return
+        try:
+            self.get_logger().info("Disconnecting from Reachy Mini.")
+            self._mini.__exit__(None, None, None)
+            self._mini = None
+            self.get_logger().info("Reachy Mini disconnected.")
+        except Exception as e:
+            self.get_logger().error(f"Error disconnecting Reachy Mini: {e}")
+
+    def _joystick_button_callback(self, msg: JoystickButtonEvent) -> None:
+        if msg.button == JoystickButton.BUTTON_SELECT.value:
+            self._connect()
+        elif msg.button == JoystickButton.BUTTON_START.value:
+            self._disconnect()
+        elif msg.button == JoystickButton.BUTTON_Y.value:
+            if self._state.active_session_id:
+                self._logger.warning("Active session in progress.")
+                return
+            self._reachy_listens.start_recording()
+        elif msg.button == JoystickButton.BUTTON_X.value:
+            output_path = self._reachy_listens.stop_recording()
+            if output_path:
+                self._state.recording_stop_time = time()
+                self._state.active_session_id = generate_unique_id()
+                self.get_logger().info(f"Recording stopped, starting ASR for session {self._state.active_session_id}")
+                self._asr_publisher.publish(
+                    AsrRequest(session_id=self._state.active_session_id, audio_path=str(output_path), language="en")
+                )
+
+    def _joystick_axis_callback(self, msg: JoystickAxisEvent) -> None:
+        if msg.axis == JoystickAxis.AXIS_LEFT.value:
+            self._reachy_moves.do_random_emotion()
+        elif msg.axis == JoystickAxis.AXIS_RIGHT.value:
+            self._reachy_moves.do_random_dance()
+        elif msg.axis == JoystickAxis.AXIS_UP.value:
+            self._reachy_sees.take_photo()
+        elif msg.axis == JoystickAxis.AXIS_DOWN.value:
+            # Project root is 6 levels up from this file
+            project_root = Path(__file__).resolve().parents[5]
+            jfk_path = project_root / "assets" / "audio" / "jfk.wav"
+            self._reachy_speaks.play_audio_queued(jfk_path)
+
+    def _on_asr_response(self, msg: AsrResponse) -> None:
+        if msg.session_id != self._state.active_session_id:
+            return  # Ignore all responses but ours
+
+        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
+        self.get_logger().info(f"Received ASR response: {msg} (elapsed: {elapsed:.2f}s)")
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"ASR error: {msg.error_message}")
+            return
+
+        state_id = none_if_empty(self._state.state_id) or ""
+        system_prompt = self._load_system_prompt()
+        self._llm_publisher.publish(
+            LlmRequest(
+                session_id=self._state.active_session_id,
+                system_prompt=system_prompt,
+                state_id=state_id,
+                content_text=msg.transcription,
+            )
+        )
+
+    @staticmethod
+    def _extract_emotion(text: str) -> tuple[Optional[str], str]:
+        """Extract optional emotion keyword from text. Example: [cheerful] Reachy is functioning at 100% efficiency."""
+        text = text.strip()
+        if not text.startswith("["):
+            return None, text
+
+        closing_bracket_index = text.find("]")
+        if closing_bracket_index == -1:
+            return None, text  # No closing bracket found, treat as normal text
+
+        emotion = text[1:closing_bracket_index].strip()
+        cleaned_text = text[closing_bracket_index + 1 :].strip()
+        return (emotion, cleaned_text) if emotion else (None, text)
+
+    def _on_llm_response(self, msg: LlmResponse) -> None:
+        if msg.session_id != self._state.active_session_id:
+            return  # Ignore all responses but ours
+
+        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
+        self.get_logger().info(f"Received LLM response: {msg} (elapsed: {elapsed:.2f}s)")
+
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"LLM error: {msg.error_message}")
+            return
+
+        # Each LLM response creates a new ID that we need to pass to the next request
+        self._state.state_id = msg.state_id
+
+        try:
+            # Extract optional emotion keyword from the LLM response
+            emotion, content_without_emotion = self._extract_emotion(msg.content_text)
+            if emotion:
+                emotion_id = f"{emotion}1"
+                if emotion_id in self._reachy_moves.recorded_emotions.list_moves():
+                    self.get_logger().info(f"Detected emotion: {emotion_id}")
+                    self._reachy_moves.do_move(emotion_id, self._reachy_moves.recorded_emotions.get(emotion_id))
+
+            # Instead of sending the raw response from the LLM, which is generally multi-line and Markdown formatted,
+            # we create a plain text version with the same original lines and submit smaller requests to the TTS engine
+            # to reduce the latency of the (initial) response.
+            text = strip_markdown(content_without_emotion)
+            lines = text.splitlines()
+            for line in lines:
+                if not is_empty(line):
+                    self._tts_publisher.publish(
+                        TtsRequest(session_id=self._state.active_session_id, text=line, language="en")
+                    )
+        except Exception as e:
+            # Send the raw response in case of an error as a fallback.
+            self.get_logger().warning(f"Failed to process LLM response: {e}")
+            self._tts_publisher.publish(
+                TtsRequest(session_id=self._state.active_session_id, text=msg.content_text, language="en")
+            )
+
+    def _on_tts_response(self, msg: TtsResponse) -> None:
+        if msg.session_id != self._state.active_session_id:
+            return  # Ignore all responses but ours
+
+        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
+        self.get_logger().info(f"Received TTS response: {msg} (elapsed: {elapsed:.2f}s)")
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"TTS error: {msg.error_message}")
+            return
+
+        self._reachy_speaks.play_audio_queued(msg.audio_path)
+
+    def _on_tts_queue_empty(self) -> None:
+        """Called when the TTS queue becomes empty after finishing playback."""
+        self._state.active_session_id = None
+        self._state.recording_stop_time = None
+        self.get_logger().info("Session complete, active_session_id cleared")
+
     def on_shutdown(self) -> None:
         """Clean up reachy node resources."""
         self.get_logger().info("Reachy node shutting down.")
         self._disconnect()
         super().on_shutdown()
-
-    def _joystick_button_callback(self, msg: JoystickButtonEvent) -> None:
-        if msg.button == JoystickButton.BUTTON_SELECT.value:
-            self._connect()
-            return
-        elif msg.button == JoystickButton.BUTTON_START.value:
-            self._disconnect()
-            return
-        elif msg.button == JoystickButton.BUTTON_Y.value:
-            self._start_recording()
-            return
-        elif msg.button == JoystickButton.BUTTON_X.value:
-            self._stop_recording()
-            return
-
-    def _joystick_axis_callback(self, msg: JoystickAxisEvent) -> None:
-        if msg.axis == JoystickAxis.AXIS_LEFT.value:
-            self._do_random_emotion()
-        elif msg.axis == JoystickAxis.AXIS_RIGHT.value:
-            self._do_random_dance()
-        elif msg.axis == JoystickAxis.AXIS_UP.value:
-            self._take_photo()
-        elif msg.axis == JoystickAxis.AXIS_DOWN.value:
-            self._play_audio()
-
-    def _do_random_emotion(self) -> None:
-        random_emotion_id = random.choice(self._recorded_emotions.list_moves())
-        random_emotion: RecordedMove = self._recorded_emotions.get(random_emotion_id)
-        self.get_logger().info(f"Playing random emotion ({random_emotion_id}): {random_emotion.description}")
-        self._do_random_move(random_emotion_id, random_emotion)
-
-    def _do_random_dance(self) -> None:
-        random_dance_id = random.choice(self._recorded_dances.list_moves())
-        random_dance: RecordedMove = self._recorded_dances.get(random_dance_id)
-        self.get_logger().info(f"Playing random dance ({random_dance_id}): {random_dance.description}")
-        self._do_random_move(random_dance_id, random_dance)
-
-    def _do_random_move(self, move_id: str, move: RecordedMove) -> None:
-        if self._mini is None:
-            self.get_logger().warning("Reachy Mini not connected.")
-            return
-        if self._is_moving:
-            self.get_logger().warning("Already moving.")
-            return
-        self._is_moving = True
-        future = asyncio.run_coroutine_threadsafe(self._mini.async_play_move(move=move, sound=True), self._core_loop)
-        future.add_done_callback(lambda f: self._on_move_played(f, move_id))
-
-    def _on_move_played(self, future: Future, move_id: str) -> None:
-        try:
-            future.result()  # Raises exception if the coroutine failed
-            self.get_logger().info(f"Move '{move_id}' played.")
-        except Exception as e:
-            self.get_logger().error(f"Move '{move_id}' failed: {e}")
-        finally:
-            self._is_moving = False
-
-    def _take_photo(self) -> None:
-        if self._mini is None:
-            self.get_logger().warning("Reachy Mini not connected.")
-            return
-
-        frame: Optional[npt.NDArray[np.uint8]] = self._mini.media.get_frame()
-        if frame is None:
-            self.get_logger().warning("Failed to capture frame: camera not available.")
-            return
-
-        try:
-            filepath = create_timestamped_filename("reachy_photo", "png")
-            cv2.imwrite(str(filepath), frame)
-            self.get_logger().info(f"Photo saved to {filepath}")
-        except Exception as e:
-            self.get_logger().error(f"Failed to save photo: {e}")
-
-    def _play_audio(self) -> None:
-        if self._mini is None:
-            self.get_logger().warning("Reachy Mini not connected.")
-            return
-        if self._is_talking:
-            self.get_logger().warning("Already talking.")
-            return
-
-        sound_file = "/home/antonio/code/zugaldia/continuum/assets/audio/jfk.wav"
-        data, sample_rate_file = sf.read(sound_file, dtype="float32")
-        sample_rate_output = self._mini.media.get_output_audio_samplerate()  # 16000
-        if sample_rate_file != sample_rate_output:
-            self.get_logger().warning(f"Sampling mismatch: {sample_rate_file} != {sample_rate_output}.")
-            return
-        if data.ndim > 1:
-            self.get_logger().warning("Audio is multichannel, mono is expected.")
-            return
-
-        duration = len(data) / sample_rate_output
-        self.get_logger().info(f"Playing {duration} seconds of audio from: {sound_file}")
-
-        self._is_talking = True
-        self._mini.media.start_playing()
-        for i in range(0, len(data), AUDIO_PLAYBACK_CHUNK_SIZE):
-            chunk = data[i : i + AUDIO_PLAYBACK_CHUNK_SIZE]
-            self._mini.media.push_audio_sample(chunk)
-
-        # We need to wait for the duration of the audio before calling stop_playing.
-        # Otherwise, playback will be interrupted.
-        self._playback_timer = self.create_timer(duration, self._finish_audio_playback)
-
-    def _finish_audio_playback(self) -> None:
-        """Finish audio playback and clean up the one-shot timer."""
-        if self._playback_timer is not None:
-            self._playback_timer.cancel()
-            self._playback_timer = None
-        if self._mini is not None:
-            self._mini.media.stop_playing()
-            self.get_logger().info("Audio played.")
-        self._is_talking = False
-
-    def _start_recording(self) -> None:
-        if self._is_recording:
-            self.get_logger().warning("Already recording.")
-            return
-
-        # We are always listening. Start recording simply clears the buffer so that we only capture fresh samples
-        # for the given start-stop period.
-        self.get_logger().info("Starting recording.")
-        self._audio_buffer.clear()
-        self._is_recording = True
-
-    def _stop_recording(self) -> None:
-        if self._mini is None:
-            self.get_logger().warning("Reachy Mini not connected.")
-            return
-        if not self._is_recording:
-            self.get_logger().warning("Not currently recording.")
-            return
-
-        self.get_logger().info("Stopping recording.")
-        self._is_recording = False
-        if len(self._audio_buffer) == 0:
-            self.get_logger().warning("No audio samples collected.")
-            return
-
-        channels_input = self._mini.media.get_input_channels()  # 2
-        sample_rate_input = self._mini.media.get_input_audio_samplerate()  # 16000
-        self.get_logger().info(f"Audio recording: {channels_input} channels, {sample_rate_input} Hz")
-
-        # See: https://github.com/pollen-robotics/reachy_mini/blob/develop/examples/debug/sound_record.py
-        audio_data = np.concatenate(list(self._audio_buffer), axis=0)
-        output_path = create_timestamped_filename("reachy_audio", "wav")
-        sf.write(str(output_path), audio_data, sample_rate_input)
-        self.get_logger().info(f"Audio saved to {output_path}")
 
 
 def main(args=None):
