@@ -1,10 +1,15 @@
 # Note: For library-specific commands, see lib/Makefile
 # For workspace-specific commands, see workspace/Makefile
 
-.PHONY: install-lib uninstall-lib lint format
+.PHONY: install-lib install-models uninstall-lib lint format
 
 install-lib:
 	cd lib && pip install --break-system-packages -e .
+
+# Install language models for TTS (kokoro/misaki)
+# Note: For Spanish/French/Hindi/Italian/Portuguese support, also install: sudo apt install espeak-ng
+install-models:
+	python3 -m spacy download en_core_web_sm
 
 uninstall-lib:
 	pip uninstall --break-system-packages -y continuum

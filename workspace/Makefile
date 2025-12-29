@@ -48,3 +48,6 @@ launch-desktop-with-foxglove:
 
 launch-desktop-with-fakes:
 	ros2 launch continuum_desktop launch_desktop_with_fakes.py continuum_config:=../continuum.yaml
+
+launch-reachy:
+	ros2 launch continuum_desktop launch_reachy.py continuum_config:=../continuum.yaml

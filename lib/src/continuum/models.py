@@ -21,11 +21,11 @@ from typing import Any, Callable, Dict, Optional
 from pydantic import BaseModel, Field
 
 from continuum.constants import ERROR_CODE_SUCCESS
-from continuum.utils import generate_session_id
+from continuum.utils import generate_unique_id
 
 
 class ContinuumRequest(BaseModel):
-    session_id: str = Field(default_factory=generate_session_id)
+    session_id: str = Field(default_factory=generate_unique_id)
 
     @classmethod
     def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumRequest":
@@ -33,7 +33,7 @@ class ContinuumRequest(BaseModel):
 
 
 class ContinuumStreamingRequest(BaseModel):
-    session_id: str = Field(default_factory=generate_session_id)
+    session_id: str = Field(default_factory=generate_unique_id)
 
     @classmethod
     def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumStreamingRequest":
@@ -41,7 +41,7 @@ class ContinuumStreamingRequest(BaseModel):
 
 
 class ContinuumResponse(BaseModel):
-    session_id: str = Field(default_factory=generate_session_id)
+    session_id: str = Field(default_factory=generate_unique_id)
     error_code: int = ERROR_CODE_SUCCESS
     error_message: str = "All systems nominal"
 
@@ -51,7 +51,7 @@ class ContinuumResponse(BaseModel):
 
 
 class ContinuumStreamingResponse(BaseModel):
-    session_id: str = Field(default_factory=generate_session_id)
+    session_id: str = Field(default_factory=generate_unique_id)
     error_code: int = ERROR_CODE_SUCCESS
     error_message: str = "All systems nominal"
 
