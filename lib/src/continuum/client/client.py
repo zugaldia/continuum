@@ -30,6 +30,7 @@ from continuum.constants import (
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
+    PATH_TTS,
     PROFILE_LOCAL,
     TOPIC_ASR_REQUEST,
     TOPIC_ASR_RESPONSE,
@@ -43,11 +44,19 @@ from continuum.constants import (
     TOPIC_LLM_REQUEST,
     TOPIC_LLM_RESPONSE,
     TOPIC_LLM_STREAMING_RESPONSE,
+    TOPIC_TTS_REQUEST,
+    TOPIC_TTS_RESPONSE,
+    TOPIC_TTS_STREAMING_RESPONSE,
 )
 from continuum.llm.models import (
     ContinuumLlmRequest,
     ContinuumLlmResponse,
     ContinuumLlmStreamingResponse,
+)
+from continuum.tts.models import (
+    ContinuumTtsRequest,
+    ContinuumTtsResponse,
+    ContinuumTtsStreamingResponse,
 )
 
 
@@ -254,6 +263,20 @@ class ContinuumClient:
         message_type = "continuum_interfaces/DictationStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumDictationStreamingResponse)
 
+    def subscribe_tts_response(self, node_name: str, callback: Callable[[ContinuumTtsResponse], None]) -> None:
+        """Subscribe to the TTS response topic for the specified TTS node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_RESPONSE}"
+        message_type = "continuum_interfaces/TtsResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsResponse)
+
+    def subscribe_tts_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumTtsStreamingResponse], None]
+    ) -> None:
+        """Subscribe to the TTS streaming response topic for the specified TTS node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/TtsStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsStreamingResponse)
+
     #
     # Publishers
     #
@@ -298,6 +321,14 @@ class ContinuumClient:
         """Publish a dictation request to the dictation app for the specified profile."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_REQUEST}"
         message_type = "continuum_interfaces/DictationRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
+        return None
+
+    def publish_tts_request(self, node_name: str, request: ContinuumTtsRequest) -> None:
+        """Publish a TTS request to the specified TTS node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_REQUEST}"
+        message_type = "continuum_interfaces/TtsRequest"
         message = roslibpy.Message(request.model_dump())
         self._publish_message(name, message_type, message)
         return None

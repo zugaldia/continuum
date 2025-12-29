@@ -11,8 +11,8 @@ from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_
 
 
 def asr_command(
-    provider: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR provider to use"),
     audio_file: Path = typer.Argument(..., help="Path to the audio file to transcribe"),
+    provider: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR provider to use"),
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Transcribe audio file using ASR."""

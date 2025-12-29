@@ -12,12 +12,14 @@ from continuum.llm import (
     OllamaLlmClient,
     OpenAiLlmClient,
 )
-from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse
+from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse, ContinuumLlmResponse
+from continuum.utils import strip_markdown
 
 
 def llm_command(
-    provider: str = typer.Option(NODE_LLM_OLLAMA, help="LLM provider to use"),
     message: str = typer.Argument(..., help="Message to send to the LLM"),
+    provider: str = typer.Option(NODE_LLM_OLLAMA, help="LLM provider to use"),
+    state_id: str = typer.Option("", help="State ID for chaining responses into conversation threads"),
 ) -> None:
     """Send message to LLM for completion."""
     typer.echo(f"Sending message to {provider} provider...")
@@ -35,15 +37,19 @@ def llm_command(
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
-    request = ContinuumLlmRequest(content_text=message)
+    request = ContinuumLlmRequest(content_text=message, state_id=state_id)
 
     def streaming_callback(streaming_response: ContinuumLlmStreamingResponse) -> None:
         """Callback to display streaming responses."""
         typer.echo(streaming_response.content_text)
 
     try:
-        response = asyncio.run(client.execute_request(request, streaming_callback=streaming_callback))
+        response: ContinuumLlmResponse = asyncio.run(
+            client.execute_request(request, streaming_callback=streaming_callback)
+        )
         typer.echo(f"\nFinal response: {response}")
+        parsed = strip_markdown(response.content_text)
+        typer.echo(f"\nFinal response (plain text): {parsed}")
     except Exception as e:
         typer.echo(f"Error during LLM request: {e}", err=True)
         raise typer.Exit(code=1)

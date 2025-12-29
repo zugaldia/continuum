@@ -14,9 +14,16 @@ from continuum.apps.models import (
 )
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrResponse, ContinuumAsrStreamingResponse
 from continuum.client import ContinuumClient
-from continuum.constants import ERROR_CODE_SUCCESS, NODE_ASR_FASTERWHISPER, NODE_LLM_OLLAMA, PROFILE_LOCAL
+from continuum.constants import (
+    ERROR_CODE_SUCCESS,
+    NODE_ASR_FASTERWHISPER,
+    NODE_LLM_OLLAMA,
+    NODE_TTS_KOKORO,
+    PROFILE_LOCAL,
+)
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
-from continuum.utils import generate_session_id
+from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsResponse, ContinuumTtsStreamingResponse
+from continuum.utils import generate_unique_id
 
 app = typer.Typer()
 
@@ -87,12 +94,12 @@ def echo_command(
 
 @app.command(name="asr")
 def asr_command(
-    node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send an ASR request and wait for the response."""
-    session_id = generate_session_id()
+    session_id = generate_unique_id()
     typer.echo(f"Sending ASR request to {node_name}: {audio_path}")
     typer.echo(f"Session ID: {session_id}")
 
@@ -126,13 +133,54 @@ def asr_command(
     run_async_command(run_asr)
 
 
+@app.command(name="tts")
+def tts_command(
+    text: str = typer.Argument(..., help="Text to convert to speech"),
+    node_name: str = typer.Option(NODE_TTS_KOKORO, help="TTS node name"),
+    language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for default"),
+) -> None:
+    """Send a TTS request and wait for the response."""
+    session_id = generate_unique_id()
+    typer.echo(f"Sending TTS request to {node_name}: {text}")
+    typer.echo(f"Session ID: {session_id}")
+
+    async def run_tts():
+        response_received, set_response_received = create_response_waiter()
+        received_audio_path = None
+
+        def on_tts_streaming_response(streaming_response: ContinuumTtsStreamingResponse) -> None:
+            typer.echo(f"Streaming response: {streaming_response}")
+
+        def on_tts_response(response: ContinuumTtsResponse) -> None:
+            nonlocal received_audio_path
+            typer.echo(f"Final response: {response}")
+            typer.echo(f"Error code: {response.error_code}")
+            typer.echo(f"Error message: {response.error_message}")
+            received_audio_path = response.audio_path
+            set_response_received()
+
+        try:
+            async with continuum_client_connection() as client:
+                client.subscribe_tts_streaming_response(node_name, on_tts_streaming_response)
+                client.subscribe_tts_response(node_name, on_tts_response)
+                request = ContinuumTtsRequest(session_id=session_id, text=text, language=language)
+                client.publish_tts_request(node_name, request)
+                await asyncio.wait_for(response_received.wait(), timeout=30.0)
+                typer.echo(f"TTS audio path: {received_audio_path}")
+        except Exception as e:
+            typer.echo(f"Error during TTS request: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    run_async_command(run_tts)
+
+
 @app.command(name="llm")
 def llm_command(
-    node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
     message: str = typer.Argument(..., help="Message to send to the LLM"),
+    node_name: str = typer.Option(NODE_LLM_OLLAMA, help="LLM node name"),
 ) -> None:
     """Send an LLM request and wait for the response."""
-    session_id = generate_session_id()
+    session_id = generate_unique_id()
     typer.echo(f"Sending LLM request to {node_name}: {message}")
     typer.echo(f"Session ID: {session_id}")
 
@@ -174,7 +222,7 @@ def dictation_command(
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send a dictation request and wait for the response."""
-    session_id = generate_session_id()
+    session_id = generate_unique_id()
     typer.echo(f"Sending dictation request with profile={profile}")
     typer.echo(f"Audio path: {audio_path}")
     typer.echo(f"Session ID: {session_id}")
