@@ -1,5 +1,6 @@
 """Utility functions for the Continuum SDK."""
 
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,23 @@ from bs4 import BeautifulSoup
 def generate_unique_id() -> str:
     """Generate a unique ID."""
     return str(uuid.uuid4())
+
+
+def generate_timestamp() -> int:
+    """Generate a timestamp for request/response model classes using nanosecond precision."""
+    return time.time_ns()
+
+
+def generate_order_id() -> int:
+    """Generate a sortable order ID, which is simply using the timestamp value."""
+    return generate_timestamp()
+
+
+def compute_elapsed_ms(start_timestamp: int, end_timestamp: Optional[int] = None) -> float:
+    """Compute elapsed time in milliseconds between two timestamps. End defaults to the current time if not provided."""
+    if end_timestamp is None:
+        end_timestamp = generate_timestamp()
+    return (end_timestamp - start_timestamp) / 1e6
 
 
 def is_empty(s: str | None) -> bool:
