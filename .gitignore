@@ -1,5 +1,6 @@
 *.pyc
 .idea/
+.mypy_cache/
 BACKLOG.md
 __pycache__/
 
