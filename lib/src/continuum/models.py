@@ -117,3 +117,16 @@ class JoystickAxis(Enum):
     AXIS_RIGHT = "AXIS_RIGHT"
     AXIS_UP = "AXIS_UP"
     AXIS_DOWN = "AXIS_DOWN"
+
+
+#
+# Echo
+#
+
+
+class EchoRequest(ContinuumRequest):
+    message: str
+
+
+class EchoResponse(ContinuumResponse):
+    message: str

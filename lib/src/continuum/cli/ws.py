@@ -22,6 +22,7 @@ from continuum.constants import (
     PROFILE_LOCAL,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
+from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsResponse, ContinuumTtsStreamingResponse
 from continuum.utils import generate_unique_id
 
@@ -68,23 +69,29 @@ def echo_command(
     message: str = typer.Argument(..., help="Message to echo"),
 ) -> None:
     """Send an echo request and wait for the response."""
+    session_id = generate_unique_id()
     typer.echo(f"Sending echo request: {message}")
+    typer.echo(f"Session ID: {session_id}")
 
     async def run_echo():
         response_received, set_response_received = create_response_waiter()
         received_message = None
 
-        def on_echo_response(msg: str) -> None:
+        def on_echo_response(response: EchoResponse) -> None:
             nonlocal received_message
-            received_message = msg
+            typer.echo(f"Response: {response}")
+            typer.echo(f"Error code: {response.error_code}")
+            typer.echo(f"Error message: {response.error_message}")
+            received_message = response.message
             set_response_received()
 
         try:
             async with continuum_client_connection() as client:
                 client.subscribe_echo(on_echo_response)
-                client.publish_echo(message)
+                request = EchoRequest(session_id=session_id, message=message)
+                client.publish_echo(request)
                 await asyncio.wait_for(response_received.wait(), timeout=10.0)
-                typer.echo(f"Echo response: {received_message}")
+                typer.echo(f"Echo message: {received_message}")
         except Exception as e:
             typer.echo(f"Error during echo request: {e}", err=True)
             raise typer.Exit(code=1)

@@ -53,6 +53,7 @@ from continuum.llm.models import (
     ContinuumLlmResponse,
     ContinuumLlmStreamingResponse,
 )
+from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import (
     ContinuumTtsRequest,
     ContinuumTtsResponse,
@@ -209,15 +210,11 @@ class ContinuumClient:
         message_type = "diagnostic_msgs/DiagnosticArray"
         self._subscribe_topic(name, message_type, callback)
 
-    def subscribe_echo(self, callback: Callable[[str], None]) -> None:
+    def subscribe_echo(self, callback: Callable[[EchoResponse], None]) -> None:
         """Subscribe to the continuum echo response topic."""
-
-        def wrapped_callback(msg: Dict[str, Any]) -> None:
-            callback(msg["data"])
-
         name = f"/{CONTINUUM_NAMESPACE}/{TOPIC_ECHO_RESPONSE}"
-        message_type = "std_msgs/String"
-        self._subscribe_topic(name, message_type, wrapped_callback)
+        message_type = "continuum_interfaces/EchoResponse"
+        self._subscribe_topic_typed(name, message_type, callback, EchoResponse)
 
     def subscribe_asr_response(self, node_name: str, callback: Callable[[ContinuumAsrResponse], None]) -> None:
         """Subscribe to the ASR response topic for the specified ASR node."""
@@ -294,11 +291,12 @@ class ContinuumClient:
         publisher.publish(message)
         return None
 
-    def publish_echo(self, message: str) -> None:
-        """Publish a message to the continuum echo request topic."""
+    def publish_echo(self, request: EchoRequest) -> None:
+        """Publish an echo request to the continuum echo request topic."""
         name = f"/{CONTINUUM_NAMESPACE}/{TOPIC_ECHO_REQUEST}"
-        message_type = "std_msgs/String"
-        self._publish_message(name, message_type, roslibpy.Message({"data": message}))
+        message_type = "continuum_interfaces/EchoRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
         return None
 
     def publish_asr_request(self, node_name: str, request: ContinuumAsrRequest) -> None:
