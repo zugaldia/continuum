@@ -1,5 +1,4 @@
 from pathlib import Path
-from time import time
 from typing import Optional
 
 import rclpy
@@ -32,15 +31,24 @@ from continuum.constants import (
     TOPIC_TTS_REQUEST,
     TOPIC_TTS_RESPONSE,
     TOPIC_LLM_RESPONSE,
+    TOPIC_LLM_STREAMING_RESPONSE,
     ERROR_CODE_SUCCESS,
+    NODE_LLM_MAPGPT,
 )
 from continuum.models import JoystickAxis, JoystickButton
-from continuum.utils import generate_unique_id, none_if_empty, strip_markdown, is_empty
+from continuum.utils import (
+    generate_unique_id,
+    none_if_empty,
+    strip_markdown,
+    is_empty,
+    generate_order_id,
+    compute_elapsed_ms,
+)
 from continuum_core.reachy.prompts import SYSTEM_PROMPT
 from continuum_core.reachy.reachy_listens import ReachyListens
 from continuum_core.reachy.reachy_moves import ReachyMoves
 from continuum_core.reachy.reachy_sees import ReachySees
-from continuum_core.reachy.reachy_speaks import ReachySpeaks
+from continuum_core.reachy.reachy_speaks import ReachySpeaks, ReachyAudio
 from continuum_core.shared.async_node import AsyncNode
 from continuum_interfaces.msg import (
     JoystickButtonEvent,
@@ -51,6 +59,7 @@ from continuum_interfaces.msg import (
     AsrResponse,
     TtsResponse,
     LlmResponse,
+    LlmStreamingResponse,
 )
 
 # Connection configuration
@@ -62,7 +71,7 @@ class ReachyState(BaseModel):
 
     active_session_id: Optional[str] = None
     state_id: Optional[str] = None  # LLM memory
-    recording_stop_time: Optional[float] = None
+    request_timestamp: Optional[int] = None  # Timestamp from the initial ASR request (nanoseconds)
 
 
 class ReachyNode(AsyncNode):
@@ -182,6 +191,14 @@ class ReachyNode(AsyncNode):
         topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_RESPONSE}"
         self.create_subscription(LlmResponse, topic_llm_response, self._on_llm_response, QOS_DEPTH_DEFAULT)
 
+        # Listen to LLM streaming responses
+        topic_llm_streaming_response = (
+            f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_STREAMING_RESPONSE}"
+        )
+        self.create_subscription(
+            LlmStreamingResponse, topic_llm_streaming_response, self._on_llm_streaming_response, QOS_DEPTH_DEFAULT
+        )
+
     def _connect(self) -> None:
         if self._mini:
             self.get_logger().warning("Reachy Mini already connected.")
@@ -208,7 +225,7 @@ class ReachyNode(AsyncNode):
         # Do these regardless of Reachy connectivity state
         self._reachy_listens.stop_listening_timer()
         self._reachy_moves.stop_movement_timer()
-        self._reachy_speaks.clear_tts_queue()
+        self._reachy_speaks.clear_audio_queue()
 
         if not self._mini:
             self.get_logger().warning("Reachy Mini not connected.")
@@ -234,12 +251,14 @@ class ReachyNode(AsyncNode):
         elif msg.button == JoystickButton.BUTTON_X.value:
             output_path = self._reachy_listens.stop_recording()
             if output_path:
-                self._state.recording_stop_time = time()
                 self._state.active_session_id = generate_unique_id()
-                self.get_logger().info(f"Recording stopped, starting ASR for session {self._state.active_session_id}")
-                self._asr_publisher.publish(
-                    AsrRequest(session_id=self._state.active_session_id, audio_path=str(output_path), language="en")
+                self._reachy_speaks.clear_audio_queue()
+                asr_request = AsrRequest(
+                    session_id=self._state.active_session_id, audio_path=str(output_path), language="en"
                 )
+                self._state.request_timestamp = asr_request.timestamp
+                self.get_logger().info(f"Recording stopped, starting ASR for session {self._state.active_session_id}")
+                self._asr_publisher.publish(asr_request)
 
     def _joystick_axis_callback(self, msg: JoystickAxisEvent) -> None:
         if msg.axis == JoystickAxis.AXIS_LEFT.value:
@@ -252,14 +271,15 @@ class ReachyNode(AsyncNode):
             # Project root is 6 levels up from this file
             project_root = Path(__file__).resolve().parents[5]
             jfk_path = project_root / "assets" / "audio" / "jfk.wav"
-            self._reachy_speaks.play_audio_queued(jfk_path)
+            self._reachy_speaks.clear_audio_queue()
+            self._reachy_speaks.queue_audio(ReachyAudio(audio_path=jfk_path, is_initial=True))
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
 
-        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
-        self.get_logger().info(f"Received ASR response: {msg} (elapsed: {elapsed:.2f}s)")
+        elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
+        self.get_logger().info(f"Received ASR response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"ASR error: {msg.error_message}")
             return
@@ -294,8 +314,8 @@ class ReachyNode(AsyncNode):
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
 
-        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
-        self.get_logger().info(f"Received LLM response: {msg} (elapsed: {elapsed:.2f}s)")
+        elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
+        self.get_logger().info(f"Received LLM response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
 
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"LLM error: {msg.error_message}")
@@ -303,6 +323,11 @@ class ReachyNode(AsyncNode):
 
         # Each LLM response creates a new ID that we need to pass to the next request
         self._state.state_id = msg.state_id
+
+        if is_empty(msg.content_text):
+            # The content is in the streaming responses instead.
+            self.get_logger().warning("LLM response is empty.")
+            return
 
         try:
             # Extract optional emotion keyword from the LLM response
@@ -317,35 +342,80 @@ class ReachyNode(AsyncNode):
             # we create a plain text version with the same original lines and submit smaller requests to the TTS engine
             # to reduce the latency of the (initial) response.
             text = strip_markdown(content_without_emotion)
-            lines = text.splitlines()
-            for line in lines:
-                if not is_empty(line):
-                    self._tts_publisher.publish(
-                        TtsRequest(session_id=self._state.active_session_id, text=line, language="en")
+            lines = [line for line in text.splitlines() if not is_empty(line)]
+            for line_index, line in enumerate(lines):
+                is_initial = line_index == 0
+                is_final = line_index == len(lines) - 1
+                order_id = generate_order_id()
+                self._tts_publisher.publish(
+                    TtsRequest(
+                        session_id=self._state.active_session_id,
+                        is_initial=is_initial,
+                        is_final=is_final,
+                        order_id=order_id,
+                        text=line,
+                        language="en",
                     )
+                )
         except Exception as e:
             # Send the raw response in case of an error as a fallback.
             self.get_logger().warning(f"Failed to process LLM response: {e}")
             self._tts_publisher.publish(
-                TtsRequest(session_id=self._state.active_session_id, text=msg.content_text, language="en")
+                TtsRequest(
+                    session_id=self._state.active_session_id,
+                    is_initial=True,
+                    is_final=True,
+                    order_id=generate_order_id(),
+                    text=msg.content_text,
+                    language="en",
+                )
             )
+
+    def _on_llm_streaming_response(self, msg: LlmStreamingResponse) -> None:
+        """Callback for LLM streaming responses."""
+        if msg.session_id != self._state.active_session_id:
+            return  # Ignore all responses but ours
+        if self._llm_node not in [NODE_LLM_MAPGPT]:
+            return  # We only support streaming responses for MapGPT at the moment
+
+        elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
+        self.get_logger().info(f"Received LLM streaming response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
+
+        self._reachy_moves.do_random_emotion()
+        self._tts_publisher.publish(
+            TtsRequest(
+                session_id=self._state.active_session_id,
+                is_initial=msg.is_initial,
+                is_final=msg.is_final,
+                order_id=msg.order_id,
+                text=msg.content_text,
+                language="en",
+            )
+        )
 
     def _on_tts_response(self, msg: TtsResponse) -> None:
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
 
-        elapsed = time() - self._state.recording_stop_time if self._state.recording_stop_time else 0
-        self.get_logger().info(f"Received TTS response: {msg} (elapsed: {elapsed:.2f}s)")
+        elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
+        self.get_logger().info(f"Received TTS response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"TTS error: {msg.error_message}")
             return
 
-        self._reachy_speaks.play_audio_queued(msg.audio_path)
+        # Pass the TTS response to ReachySpeaks for buffering and ordered playback
+        self._reachy_speaks.queue_audio(
+            ReachyAudio(
+                audio_path=Path(msg.audio_path),
+                order_id=msg.order_id,
+                is_initial=msg.is_initial,
+            )
+        )
 
     def _on_tts_queue_empty(self) -> None:
         """Called when the TTS queue becomes empty after finishing playback."""
         self._state.active_session_id = None
-        self._state.recording_stop_time = None
+        self._state.request_timestamp = None
         self.get_logger().info("Session complete, active_session_id cleared")
 
     def on_shutdown(self) -> None:
