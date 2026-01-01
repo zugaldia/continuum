@@ -1,0 +1,7 @@
+*.pyc
+.idea/
+BACKLOG.md
+__pycache__/
+
+# See ./workspace/src/continuum_desktop/config/continuum.yaml for all available options
+continuum.yaml

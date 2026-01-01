@@ -1,0 +1,84 @@
+# Continuum desktop parameters configuration
+# This file manages the parameters for all nodes in the system
+
+# /** applies to all nodes
+/**:
+  ros__parameters:
+    debug_mode: false
+
+# Joystick node
+/continuum/input/joy:
+  ros__parameters:
+    # Use `ros2 run joy joy_enumerate_devices` for valid values
+    # https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy#parameters
+    device_id: 0
+    # Rate in Hz at which a joystick that has a non-changing state will
+    # resend the previously sent message. If set to 0.0, autorepeat will
+    # be disabled, meaning joy messages will only be published when the
+    # joystick changes.
+    autorepeat_rate: 0.0
+
+# FasterWhisper ASR node
+/continuum/asr/fasterwhisper/fasterwhisper_asr:
+  ros__parameters:
+    model_name: "medium"
+    device: "auto"
+    download_root: ""
+
+# OpenAI ASR node
+/continuum/asr/openai/openai_asr:
+  ros__parameters:
+    model_name: "gpt-4o-transcribe"
+    api_key: ""
+    base_url: ""
+
+# ElevenLabs TTS node
+/continuum/tts/elevenlabs/elevenlabs_tts:
+  ros__parameters:
+    model_name: "eleven_multilingual_v2"
+    api_key: ""
+    voice_id: "JBFqnCBsd6RMkjVDRZzb"
+
+# Ollama LLM node
+/continuum/llm/ollama/ollama_llm:
+  ros__parameters:
+    host: "http://localhost:11434"
+    model_name: "gemma3"
+
+# OpenAI LLM node
+/continuum/llm/openai/openai_llm:
+  ros__parameters:
+    api_key: ""
+    base_url: ""
+    model_name: "gpt-5.2"
+
+# Google LLM node
+/continuum/llm/google/google_llm:
+  ros__parameters:
+    api_key: ""
+    model_name: "gemini-3-flash-preview"
+
+# MapGPT LLM node
+/continuum/llm/mapgpt/mapgpt_llm:
+  ros__parameters:
+    access_token: ""
+
+# Dictation app node - local profile
+/continuum/app/dictation/local/dictation_app_local:
+  ros__parameters:
+    asr_node: "fasterwhisper"
+    llm_node: "ollama"
+
+# Dictation app node - cloud profile
+/continuum/app/dictation/cloud/dictation_app_cloud:
+  ros__parameters:
+    asr_node: "openai"
+    llm_node: "google"
+
+# Reachy
+/continuum/hardware/reachy/reachy:
+  ros__parameters:
+    asr_node: "fasterwhisper"
+    tts_node: "kokoro"
+    llm_node: "ollama"
+    system_prompt_path: ""
