@@ -1,6 +1,7 @@
 # Dictation Response Message
 # Needs to be kept in sync with the data class in `lib/src/continuum/apps/models.py`
 
+int64 timestamp       # Timestamp in nanoseconds
 string session_id     # Unique identifier for the dictation session
 string content_text   # Response content from the LLM
 int32 error_code      # Error code (0 = no error)

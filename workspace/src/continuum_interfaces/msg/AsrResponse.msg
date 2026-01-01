@@ -1,6 +1,7 @@
 # ASR Response Message
 # Needs to be kept in sync with the data class in `lib/src/continuum/asr/models.py`
 
+int64 timestamp               # Timestamp in nanoseconds
 string session_id             # Unique identifier for the ASR session
 string transcription          # The transcribed text from the audio
 string language               # Detected language code (empty string "" if not detected/available)
