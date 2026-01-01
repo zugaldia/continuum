@@ -25,7 +25,7 @@ from websocket import WebSocket, WebSocketApp
 
 from continuum.constants import PARAM_MAPBOX_ACCESS_TOKEN, PARAM_MAPBOX_ACCESS_TOKEN_DEFAULT, ERROR_CODE_UNEXPECTED
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmStreamingResponse, ContinuumLlmResponse
-from continuum.models import ContinuumClient
+from continuum.models import ContinuumExecutor
 from continuum.utils import is_empty
 from continuum_core.llm.base_llm_node import BaseLlmNode
 
@@ -50,11 +50,11 @@ class MapGPTState(BaseModel):
     state_id: Optional[str] = None
 
 
-class MapGPTLlmNode(BaseLlmNode, ContinuumClient):
+class MapGPTLlmNode(BaseLlmNode, ContinuumExecutor):
     def __init__(self) -> None:
         super().__init__("mapgpt_llm_node")
         self.set_node_info(name="MapGPT LLM Node", description="Integration with Mapbox MapGPT")
-        self._client = self
+        self._executor = self
         self._access_token = self._get_str_param(PARAM_MAPBOX_ACCESS_TOKEN)
         self._ws_app: Optional[WebSocketApp] = None
         self._thread_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)

@@ -1,7 +1,7 @@
 from abc import ABC
 
-from continuum.models import ContinuumClient
+from continuum.models import ContinuumExecutor
 
 
-class ContinuumAsrClient(ContinuumClient, ABC):
+class ContinuumAsrClient(ContinuumExecutor, ABC):
     pass

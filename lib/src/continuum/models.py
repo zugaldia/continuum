@@ -67,7 +67,7 @@ class ContinuumStreamingResponse(BaseModel):
         return cls.model_validate(msg)
 
 
-class ContinuumClient(ABC):
+class ContinuumExecutor(ABC):
     @abstractmethod
     async def execute_request(
         self,
