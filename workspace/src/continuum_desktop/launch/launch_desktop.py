@@ -13,6 +13,7 @@ from continuum.constants import (
     NODE_LLM_OPENAI,
     NODE_LLM_GOOGLE,
     NODE_TTS_KOKORO,
+    NODE_TTS_ELEVENLABS,
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
@@ -123,6 +124,13 @@ def generate_launch_description():
                 executable="kokoro_tts_node",
                 name="kokoro_tts",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_TTS}/{NODE_TTS_KOKORO}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="elevenlabs_tts_node",
+                name="elevenlabs_tts",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_TTS}/{NODE_TTS_ELEVENLABS}",
                 parameters=parameters,
             ),
             # App nodes

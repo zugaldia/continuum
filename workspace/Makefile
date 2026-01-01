@@ -1,4 +1,4 @@
-.PHONY: deps clean build-all test lint format kill-zombies websocket foxglove launch-desktop launch-desktop-with-bridge launch-desktop-with-foxglove launch-desktop-with-fakes
+.PHONY: deps clean build-all test lint format kill-zombies websocket foxglove launch-desktop launch-desktop-with-bridge launch-desktop-with-foxglove launch-desktop-with-fakes launch-mapbox
 
 deps:
 	rosdep install -i --from-path src --rosdistro kilted -y
@@ -51,3 +51,6 @@ launch-desktop-with-fakes:
 
 launch-reachy:
 	ros2 launch continuum_desktop launch_reachy.py continuum_config:=../continuum.yaml
+
+launch-mapbox:
+	ros2 launch continuum_desktop launch_mapbox.py continuum_config:=../continuum.yaml

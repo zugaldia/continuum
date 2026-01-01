@@ -8,8 +8,8 @@ install-lib:
 
 # Install language models for TTS (kokoro/misaki)
 # Note: For Spanish/French/Hindi/Italian/Portuguese support, also install: sudo apt install espeak-ng
-install-models:
-	python3 -m spacy download en_core_web_sm
+install-spacy-models:
+	python3 -m spacy download en_core_web_sm --break-system-packages
 
 uninstall-lib:
 	pip uninstall --break-system-packages -y continuum

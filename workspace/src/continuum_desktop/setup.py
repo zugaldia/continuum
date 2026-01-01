@@ -15,6 +15,7 @@ setup(
         ("share/" + package_name + "/launch", ["launch/launch_desktop_with_bridge.py"]),
         ("share/" + package_name + "/launch", ["launch/launch_desktop_with_foxglove.py"]),
         ("share/" + package_name + "/launch", ["launch/launch_reachy.py"]),
+        ("share/" + package_name + "/launch", ["launch/launch_mapbox.py"]),
     ],
     install_requires=["setuptools", "continuum"],
     zip_safe=True,

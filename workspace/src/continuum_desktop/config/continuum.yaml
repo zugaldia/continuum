@@ -32,6 +32,13 @@
     api_key: ""
     base_url: ""
 
+# ElevenLabs TTS node
+/continuum/tts/elevenlabs/elevenlabs_tts:
+  ros__parameters:
+    model_name: "eleven_multilingual_v2"
+    api_key: ""
+    voice_id: "JBFqnCBsd6RMkjVDRZzb"
+
 # Ollama LLM node
 /continuum/llm/ollama/ollama_llm:
   ros__parameters:
@@ -50,6 +57,11 @@
   ros__parameters:
     api_key: ""
     model_name: "gemini-3-flash-preview"
+
+# MapGPT LLM node
+/continuum/llm/mapgpt/mapgpt_llm:
+  ros__parameters:
+    access_token: ""
 
 # Dictation app node - local profile
 /continuum/app/dictation/local/dictation_app_local:

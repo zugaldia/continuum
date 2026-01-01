@@ -40,8 +40,10 @@ setup(
             "ollama_llm_node = continuum_core.llm.ollama_llm_node:main",
             "openai_llm_node = continuum_core.llm.openai_llm_node:main",
             "google_llm_node = continuum_core.llm.google_llm_node:main",
+            "mapgpt_llm_node = continuum_core.llm.mapgpt_llm_node:main",
             # TTS nodes
             "kokoro_tts_node = continuum_core.tts.kokoro_tts_node:main",
+            "elevenlabs_tts_node = continuum_core.tts.elevenlabs_tts_node:main",
             # App nodes
             "dictation_app_node = continuum_core.apps.dictation_app_node:main",
             # Reachy
