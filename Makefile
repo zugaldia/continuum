@@ -1,5 +1,6 @@
 # Note: For library-specific commands, see lib/Makefile
 # For workspace-specific commands, see workspace/Makefile
+# For scripts-specific commands, see scripts/Makefile
 
 .PHONY: install-lib install-models uninstall-lib lint format
 
@@ -17,7 +18,9 @@ uninstall-lib:
 lint:
 	cd lib && $(MAKE) lint
 	cd workspace && $(MAKE) lint
+	cd scripts && $(MAKE) lint
 
 format:
 	cd lib && $(MAKE) format
 	cd workspace && $(MAKE) format
+	cd scripts && $(MAKE) format
