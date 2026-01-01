@@ -3,9 +3,9 @@
 
 int64 timestamp       # Timestamp in nanoseconds
 string session_id     # Unique identifier for the dictation session
-string content_text   # Response content from the LLM
 int32 error_code      # Error code (0 = no error)
 string error_message  # Error message (default: "All systems nominal")
+string content_text   # Response content from the LLM
 string status         # Status of the dictation request ("queued", "transcribed", "completed", or empty)
 string asr_node       # Name of the ASR node that processed the request
 string llm_node       # Name of the LLM node that processed the request
