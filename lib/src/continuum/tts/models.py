@@ -4,6 +4,9 @@ from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStrea
 
 
 class ContinuumTtsRequest(ContinuumRequest):
+    is_initial: bool = False
+    is_final: bool = False
+    order_id: int = 0
     text: str
     language: str = ""
 
@@ -17,6 +20,9 @@ class ContinuumTtsRequest(ContinuumRequest):
 
 
 class ContinuumTtsResponse(ContinuumResponse):
+    is_initial: bool = False
+    is_final: bool = False
+    order_id: int = 0
     audio_path: str = ""
 
 
@@ -37,3 +43,8 @@ class BaseTtsOptions(BaseModel):
 
 class KokoroTtsOptions(BaseTtsOptions):
     device: str = ""
+
+
+class ElevenLabsTtsOptions(BaseTtsOptions):
+    api_key: str = ""
+    voice_id: str = ""

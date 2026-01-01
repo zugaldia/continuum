@@ -20,10 +20,12 @@ NODE_ASR_FAKE = "fake"
 NODE_ASR_FASTERWHISPER = "fasterwhisper"
 NODE_ASR_OPENAI = "openai"
 NODE_TTS_KOKORO = "kokoro"
+NODE_TTS_ELEVENLABS = "elevenlabs"
 NODE_LLM_FAKE = "fake"
 NODE_LLM_OLLAMA = "ollama"
 NODE_LLM_OPENAI = "openai"
 NODE_LLM_GOOGLE = "google"
+NODE_LLM_MAPGPT = "mapgpt"
 NODE_APP_DICTATION = "dictation"
 NODE_REACHY = "reachy"
 
@@ -80,10 +82,17 @@ PARAM_TTS_MODEL_NAME_DEFAULT = ""  # Shared param is generically empty (the conc
 
 # Default model names for each TTS provider
 DEFAULT_MODEL_NAME_KOKORO = "hexgrad/Kokoro-82M"  # A repo ID
+DEFAULT_MODEL_NAME_ELEVENLABS = "eleven_multilingual_v2"
 
 # Kokoro TTS parameters
 PARAM_KOKORO_DEVICE = "device"
 PARAM_KOKORO_DEVICE_DEFAULT = ""
+
+# ElevenLabs TTS parameters
+PARAM_ELEVENLABS_API_KEY = "api_key"
+PARAM_ELEVENLABS_API_KEY_DEFAULT = ""
+PARAM_ELEVENLABS_VOICE_ID = "voice_id"
+PARAM_ELEVENLABS_VOICE_ID_DEFAULT = "JBFqnCBsd6RMkjVDRZzb"
 
 # Common LLM parameters
 PARAM_LLM_MODEL_NAME = "model_name"
@@ -107,6 +116,10 @@ PARAM_OPENAI_LLM_BASE_URL_DEFAULT = ""
 # Google LLM parameters
 PARAM_GOOGLE_LLM_API_KEY = "api_key"
 PARAM_GOOGLE_LLM_API_KEY_DEFAULT = ""
+
+# MapGPT LLM parameters
+PARAM_MAPBOX_ACCESS_TOKEN = "access_token"
+PARAM_MAPBOX_ACCESS_TOKEN_DEFAULT = ""
 
 # Shared parameters across Dictation app and Reachy nodes
 PARAM_ASR_NODE = "asr_node"

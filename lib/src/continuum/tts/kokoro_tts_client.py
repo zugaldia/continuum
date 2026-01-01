@@ -98,10 +98,21 @@ class KokoroTtsClient(ContinuumTtsClient):
 
         if audio_path is None:
             return ContinuumTtsResponse(
-                session_id=request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message="No audio generated."
+                session_id=request.session_id,
+                is_initial=request.is_initial,
+                is_final=request.is_final,
+                order_id=request.order_id,
+                error_code=ERROR_CODE_UNEXPECTED,
+                error_message="No audio generated.",
             )
         else:
-            return ContinuumTtsResponse(session_id=request.session_id, audio_path=str(audio_path))
+            return ContinuumTtsResponse(
+                session_id=request.session_id,
+                is_initial=request.is_initial,
+                is_final=request.is_final,
+                order_id=request.order_id,
+                audio_path=str(audio_path),
+            )
 
     @staticmethod
     def _resample(data: numpy.ndarray):
