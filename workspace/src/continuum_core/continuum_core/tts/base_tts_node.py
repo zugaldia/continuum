@@ -73,7 +73,12 @@ class BaseTtsNode(QueueNode, ABC):
         except Exception as e:
             self.publish_tts_response(
                 ContinuumTtsResponse(
-                    session_id=sdk_request.session_id, error_code=ERROR_CODE_UNEXPECTED, error_message=str(e)
+                    session_id=sdk_request.session_id,
+                    is_initial=sdk_request.is_initial,
+                    is_final=sdk_request.is_final,
+                    order_id=sdk_request.order_id,
+                    error_code=ERROR_CODE_UNEXPECTED,
+                    error_message=str(e),
                 )
             )
         finally:
