@@ -6,6 +6,7 @@ from typing import Callable
 
 import typer
 
+from continuum.agent.models import ContinuumAgentRequest, ContinuumAgentResponse, ContinuumAgentStreamingResponse
 from continuum.apps.models import (
     DICTATION_STATUS_COMPLETED,
     ContinuumDictationRequest,
@@ -16,6 +17,7 @@ from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrResponse, Cont
 from continuum.client import ContinuumClient
 from continuum.constants import (
     ERROR_CODE_SUCCESS,
+    NODE_AGENT_PYDANTIC,
     NODE_ASR_FASTERWHISPER,
     NODE_LLM_OLLAMA,
     NODE_TTS_KOKORO,
@@ -24,7 +26,7 @@ from continuum.constants import (
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsResponse, ContinuumTtsStreamingResponse
-from continuum.utils import generate_unique_id
+from continuum.utils import generate_unique_id, is_empty
 
 app = typer.Typer()
 
@@ -220,6 +222,52 @@ def llm_command(
             raise typer.Exit(code=1)
 
     run_async_command(run_llm)
+
+
+@app.command(name="agent")
+def agent_command(
+    message: str = typer.Argument(..., help="Message to send to the agent"),
+    node_name: str = typer.Option(NODE_AGENT_PYDANTIC, help="Agent node name"),
+    state_id: str = typer.Option("", help="State ID to continue a conversation"),
+) -> None:
+    """Send an agent request and wait for the response."""
+    # Generate a state_id if not provided
+    if is_empty(state_id):
+        state_id = generate_unique_id()
+
+    session_id = generate_unique_id()
+    typer.echo(f"Sending agent request to {node_name}: {message}")
+    typer.echo(f"Session ID: {session_id}")
+    typer.echo(f"State ID: {state_id}")
+
+    async def run_agent():
+        response_received, set_response_received = create_response_waiter()
+        received_response = None
+
+        def on_agent_streaming_response(streaming_response: ContinuumAgentStreamingResponse) -> None:
+            typer.echo(f"Streaming response: {streaming_response}")
+
+        def on_agent_response(response: ContinuumAgentResponse) -> None:
+            nonlocal received_response
+            typer.echo(f"Final response: {response}")
+            typer.echo(f"Error code: {response.error_code}")
+            typer.echo(f"Error message: {response.error_message}")
+            received_response = response
+            set_response_received()
+
+        try:
+            async with continuum_client_connection() as client:
+                client.subscribe_agent_streaming_response(node_name, on_agent_streaming_response)
+                client.subscribe_agent_response(node_name, on_agent_response)
+                request = ContinuumAgentRequest(session_id=session_id, content_text=message, state_id=state_id)
+                client.publish_agent_request(node_name, request)
+                await asyncio.wait_for(response_received.wait(), timeout=30.0)
+                typer.echo(f"Agent response received: {received_response}")
+        except Exception as e:
+            typer.echo(f"Error during agent request: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    run_async_command(run_agent)
 
 
 @app.command(name="dictation")
