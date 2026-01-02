@@ -11,6 +11,7 @@ continuum --help
 continuum asr --help
 continuum llm --help
 continuum tts --help
+continuum agent --help
 continuum ws --help
 ```
 
@@ -30,6 +31,12 @@ continuum llm "What is the capital of Spain?" --provider ollama
 
 ```bash
 continuum tts "Hello world" --provider kokoro
+```
+
+## Agent Example
+
+```bash
+continuum agent "Do a web search and summarize the latest tech news." --provider pydantic
 ```
 
 ## WebSocket Examples
@@ -56,6 +63,12 @@ continuum ws llm "What is the capital of France?"
 
 ```bash
 continuum ws tts "Hello world"
+```
+
+### Agent
+
+```bash
+continuum ws agent "Do a web search and summarize the latest tech news."
 ```
 
 ### Dictation
