@@ -1,0 +1,7 @@
+services:
+  continuum:
+    container_name: continuum
+    image: continuum:latest
+    build: .
+    ports:
+      - "9090:9090"
