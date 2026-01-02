@@ -23,13 +23,13 @@ class FakeLlmNode(BaseLlmNode):
         model_name = self.model_name
         options = FakeLlmOptions(model_name=model_name)
 
-        self._client = FakeLlmClient(options=options)
+        self._executor = FakeLlmClient(options=options)
         self.get_logger().info(f"Fake LLM node initialized: {options}")
 
     def on_shutdown(self) -> None:
         """Clean up fake LLM node resources."""
         self.get_logger().info("Fake LLM node shutting down.")
-        self._client.shutdown()
+        self._executor.shutdown()
         super().on_shutdown()
 
 

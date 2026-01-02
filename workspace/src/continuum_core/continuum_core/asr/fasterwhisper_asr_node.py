@@ -30,9 +30,9 @@ class FasterWhisperAsrNode(BaseAsrNode):
             download_root=download_root,
         )
 
-        self._client = FasterWhisperAsrClient(options=options)
+        self._executor = FasterWhisperAsrClient(options=options)
         if self.debug_mode:
-            client = cast(FasterWhisperAsrClient, self._client)
+            client = cast(FasterWhisperAsrClient, self._executor)
             self.get_logger().info(f"Available models: {client.get_available_models()}")
             self.get_logger().info(f"Supported languages: {client.get_supported_languages()}")
         self.get_logger().info(f"Faster Whisper ASR node initialized: {options}")
@@ -40,7 +40,7 @@ class FasterWhisperAsrNode(BaseAsrNode):
     def on_shutdown(self) -> None:
         """Clean up Faster Whisper ASR node resources."""
         self.get_logger().info("Faster Whisper ASR node shutting down.")
-        self._client.shutdown()
+        self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

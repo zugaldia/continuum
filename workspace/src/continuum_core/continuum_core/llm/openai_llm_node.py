@@ -26,13 +26,13 @@ class OpenAILlmNode(BaseLlmNode):
         model_name = self.model_name
         options = OpenAiLlmOptions(api_key=api_key, base_url=base_url, model_name=model_name)
 
-        self._client = OpenAiLlmClient(options=options)
+        self._executor = OpenAiLlmClient(options=options)
         self.get_logger().info(f"OpenAI LLM node initialized: {options}")
 
     def on_shutdown(self) -> None:
         """Clean up OpenAI LLM node resources."""
         self.get_logger().info("OpenAI LLM node shutting down.")
-        self._client.shutdown()
+        self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

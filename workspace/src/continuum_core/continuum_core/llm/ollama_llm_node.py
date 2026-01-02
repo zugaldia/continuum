@@ -20,13 +20,13 @@ class OllamaLlmNode(BaseLlmNode):
         model_name = self.model_name
         options = OllamaLlmOptions(host=host, model_name=model_name)
 
-        self._client = OllamaLlmClient(options=options)
+        self._executor = OllamaLlmClient(options=options)
         self.get_logger().info(f"Ollama LLM node initialized: {options}")
 
     def on_shutdown(self) -> None:
         """Clean up ollama LLM node resources."""
         self.get_logger().info("Ollama LLM node shutting down.")
-        self._client.shutdown()
+        self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

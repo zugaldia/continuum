@@ -27,13 +27,13 @@ class FakeAsrNode(BaseAsrNode):
         model_name = self.model_name
         options = FakeAsrOptions(model_name=model_name)
 
-        self._client = FakeAsrClient(options=options)
+        self._executor = FakeAsrClient(options=options)
         self.get_logger().info(f"Fake ASR node initialized: {options}")
 
     def on_shutdown(self) -> None:
         """Clean up fake ASR node resources."""
         self.get_logger().info("Fake ASR node shutting down.")
-        self._client.shutdown()
+        self._executor.shutdown()
         super().on_shutdown()
 
 
