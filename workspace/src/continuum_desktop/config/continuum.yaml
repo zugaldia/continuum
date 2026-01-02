@@ -43,7 +43,7 @@
 /continuum/llm/ollama/ollama_llm:
   ros__parameters:
     host: "http://localhost:11434"
-    model_name: "gemma3"
+    model_name: "gpt-oss"
 
 # OpenAI LLM node
 /continuum/llm/openai/openai_llm:
@@ -57,6 +57,19 @@
   ros__parameters:
     api_key: ""
     model_name: "gemini-3-flash-preview"
+
+# Pydantic Agent node
+/continuum/agent/pydantic/pydantic_agent_node:
+  ros__parameters:
+    provider_name: "ollama"
+    model_name: "gpt-oss"
+    api_key: ""
+    base_url: "http://localhost:11434/v1"
+    instructions: "You are a helpful assistant."
+    enable_web_search_tool: false
+    enable_web_fetch_tool: false
+    enable_memory_tool: false
+    enable_file_search_tool: false
 
 # MapGPT LLM node
 /continuum/llm/mapgpt/mapgpt_llm:
