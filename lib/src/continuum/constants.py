@@ -9,6 +9,7 @@ PATH_ASR = "asr"
 PATH_TTS = "tts"
 PATH_LLM = "llm"
 PATH_APP = "app"
+PATH_AGENT = "agent"
 PATH_HARDWARE = "hardware"
 
 # Profile names
@@ -27,6 +28,7 @@ NODE_LLM_OPENAI = "openai"
 NODE_LLM_GOOGLE = "google"
 NODE_LLM_MAPGPT = "mapgpt"
 NODE_APP_DICTATION = "dictation"
+NODE_AGENT_PYDANTIC = "pydantic"
 NODE_REACHY = "reachy"
 
 # Topic names
@@ -47,6 +49,9 @@ TOPIC_LLM_STREAMING_RESPONSE = "llm_streaming_response"
 TOPIC_DICTATION_REQUEST = "dictation_request"
 TOPIC_DICTATION_RESPONSE = "dictation_response"
 TOPIC_DICTATION_STREAMING_RESPONSE = "dictation_streaming_response"
+TOPIC_AGENT_REQUEST = "agent_request"
+TOPIC_AGENT_RESPONSE = "agent_response"
+TOPIC_AGENT_STREAMING_RESPONSE = "agent_streaming_response"
 
 # Common parameters
 PARAM_DEBUG_MODE = "debug_mode"
@@ -101,7 +106,7 @@ PARAM_LLM_MODEL_NAME_DEFAULT = ""  # Shared param is generically empty (the conc
 # Default model names for each LLM provider
 DEFAULT_MODEL_NAME_OPENAI = "gpt-5.2"
 DEFAULT_MODEL_NAME_GOOGLE = "gemini-3-flash-preview"
-DEFAULT_MODEL_NAME_OLLAMA = "gemma3"
+DEFAULT_MODEL_NAME_OLLAMA = "gpt-oss"
 
 # Ollama LLM parameters
 PARAM_OLLAMA_HOST = "host"
@@ -120,6 +125,29 @@ PARAM_GOOGLE_LLM_API_KEY_DEFAULT = ""
 # MapGPT LLM parameters
 PARAM_MAPBOX_ACCESS_TOKEN = "access_token"
 PARAM_MAPBOX_ACCESS_TOKEN_DEFAULT = ""
+
+# Common Agent parameters
+PARAM_AGENT_PROVIDER_NAME = "provider_name"
+PARAM_AGENT_PROVIDER_NAME_DEFAULT = "ollama"
+PARAM_AGENT_MODEL_NAME = "model_name"
+PARAM_AGENT_MODEL_NAME_DEFAULT = ""  # Shared param is generically empty (the concrete values are below)
+PARAM_AGENT_API_KEY = "api_key"
+PARAM_AGENT_API_KEY_DEFAULT = ""
+PARAM_AGENT_BASE_URL = "base_url"
+PARAM_AGENT_BASE_URL_DEFAULT = ""
+PARAM_AGENT_INSTRUCTIONS = "instructions"
+PARAM_AGENT_INSTRUCTIONS_DEFAULT = "You are a helpful assistant."
+PARAM_AGENT_ENABLE_WEB_SEARCH_TOOL = "enable_web_search_tool"
+PARAM_AGENT_ENABLE_WEB_SEARCH_TOOL_DEFAULT = False
+PARAM_AGENT_ENABLE_WEB_FETCH_TOOL = "enable_web_fetch_tool"
+PARAM_AGENT_ENABLE_WEB_FETCH_TOOL_DEFAULT = False
+PARAM_AGENT_ENABLE_MEMORY_TOOL = "enable_memory_tool"
+PARAM_AGENT_ENABLE_MEMORY_TOOL_DEFAULT = False
+PARAM_AGENT_ENABLE_FILE_SEARCH_TOOL = "enable_file_search_tool"
+PARAM_AGENT_ENABLE_FILE_SEARCH_TOOL_DEFAULT = False
+
+# Default model names for each Agent provider
+DEFAULT_MODEL_NAME_PYDANTIC_AGENT = "gpt-oss"
 
 # Shared parameters across Dictation app and Reachy nodes
 PARAM_ASR_NODE = "asr_node"

@@ -19,6 +19,7 @@ dependencies = [
     "ollama~=0.6.1",
     "openai~=2.14.0",
     "pydantic~=2.12.5",
+    "pydantic-ai~=1.39.0", # Switch to the pydantic-ai-slim [] format
     "requests~=2.32.5",
     "roslibpy~=2.0.0",
     "typer~=0.21.0",
