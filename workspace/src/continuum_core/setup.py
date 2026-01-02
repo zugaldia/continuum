@@ -46,6 +46,8 @@ setup(
             "elevenlabs_tts_node = continuum_core.tts.elevenlabs_tts_node:main",
             # App nodes
             "dictation_app_node = continuum_core.apps.dictation_app_node:main",
+            # Agent nodes
+            "pydantic_agent_node = continuum_core.agent.pydantic_agent_node:main",
             # Reachy
             "reachy_node = continuum_core.reachy.reachy_node:main",
         ],
