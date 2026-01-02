@@ -2,7 +2,7 @@
 # For workspace-specific commands, see workspace/Makefile
 # For scripts-specific commands, see scripts/Makefile
 
-.PHONY: install-lib install-models uninstall-lib lint format
+.PHONY: install-lib install-models uninstall-lib lint format docker-build docker-up docker-down docker-logs
 
 install-lib:
 	cd lib && pip install --break-system-packages -e .
@@ -24,3 +24,15 @@ format:
 	cd lib && $(MAKE) format
 	cd workspace && $(MAKE) format
 	cd scripts && $(MAKE) format
+
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f

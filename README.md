@@ -9,7 +9,9 @@ with a pluggable architecture that makes it easy to swap providers or add new ca
 
 ## Getting Started
 
-Start by setting up the local server using [these instructions](SERVER.md). This is the main system component.
+Start by setting up the local server using [Docker](docker/README.md).
+Alternatively, you can also set up everything manually using [these instructions](SERVER.md).
+This is the main system component.
 
 Typically, to integrate Continuum into your project, you would run the Continuum server locally and interact with it
 using the provided [CLI](CLI.md) or [Python client](./lib/src/continuum/client/client.py).
