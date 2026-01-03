@@ -17,7 +17,7 @@ continuum ws --help
 ## ASR Example
 
 ```bash
-continuum asr assets/audio/jfk.flac --provider faster-whisper
+continuum asr assets/audio/jfk.flac --provider fasterwhisper
 ```
 
 ## LLM Example
