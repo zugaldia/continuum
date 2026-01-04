@@ -22,11 +22,12 @@ from continuum.constants import (
     NODE_LLM_OLLAMA,
     NODE_TTS_KOKORO,
     PROFILE_LOCAL,
+    DEFAULT_AUDIO_FORMAT,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
 from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsResponse, ContinuumTtsStreamingResponse
-from continuum.utils import generate_unique_id, is_empty
+from continuum.utils import generate_unique_id, is_empty, create_timestamped_filename, save_wav_file, load_wav_file
 
 app = typer.Typer()
 
@@ -103,11 +104,18 @@ def echo_command(
 
 @app.command(name="asr")
 def asr_command(
-    audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    audio_file: str = typer.Argument(..., help="Path to the audio file"),
     node_name: str = typer.Option(NODE_ASR_FASTERWHISPER, help="ASR node name"),
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send an ASR request and wait for the response."""
+    from pathlib import Path
+
+    audio_path = Path(audio_file)
+    if not audio_path.exists():
+        typer.echo(f"Error: Audio file not found: {audio_path}", err=True)
+        raise typer.Exit(code=1)
+
     session_id = generate_unique_id()
     typer.echo(f"Sending ASR request to {node_name}: {audio_path}")
     typer.echo(f"Session ID: {session_id}")
@@ -121,17 +129,25 @@ def asr_command(
 
         def on_asr_response(response: ContinuumAsrResponse) -> None:
             nonlocal received_transcript
-            typer.echo(f"Final response: {response}")
+            typer.echo(f"Final response: transcription='{response.transcription}'")
             typer.echo(f"Error code: {response.error_code}")
             typer.echo(f"Error message: {response.error_message}")
             received_transcript = response.transcription
             set_response_received()
 
         try:
+            # Load audio file and populate audio_data
+            audio_data, sample_rate, channels, sample_width = load_wav_file(audio_path)
+            request = ContinuumAsrRequest(session_id=session_id, language=language)
+            request.set_audio_bytes(audio_data)
+            request.sample_rate = sample_rate
+            request.channels = channels
+            request.sample_width = sample_width
+            request.format = DEFAULT_AUDIO_FORMAT
+
             async with continuum_client_connection() as client:
                 client.subscribe_asr_streaming_response(node_name, on_asr_streaming_response)
                 client.subscribe_asr_response(node_name, on_asr_response)
-                request = ContinuumAsrRequest(session_id=session_id, audio_path=audio_path, language=language)
                 client.publish_asr_request(node_name, request)
                 await asyncio.wait_for(response_received.wait(), timeout=30.0)
                 typer.echo(f"ASR transcript: {received_transcript}")
@@ -155,17 +171,17 @@ def tts_command(
 
     async def run_tts():
         response_received, set_response_received = create_response_waiter()
-        received_audio_path = None
+        received_response = None
 
         def on_tts_streaming_response(streaming_response: ContinuumTtsStreamingResponse) -> None:
             typer.echo(f"Streaming response: {streaming_response}")
 
         def on_tts_response(response: ContinuumTtsResponse) -> None:
-            nonlocal received_audio_path
-            typer.echo(f"Final response: {response}")
+            nonlocal received_response
+            typer.echo(f"Final response: audio_data length={len(response.audio_data)}")
             typer.echo(f"Error code: {response.error_code}")
             typer.echo(f"Error message: {response.error_message}")
-            received_audio_path = response.audio_path
+            received_response = response
             set_response_received()
 
         try:
@@ -175,7 +191,18 @@ def tts_command(
                 request = ContinuumTtsRequest(session_id=session_id, text=text, language=language)
                 client.publish_tts_request(node_name, request)
                 await asyncio.wait_for(response_received.wait(), timeout=30.0)
-                typer.echo(f"TTS audio path: {received_audio_path}")
+
+                # Save audio data to file
+                if received_response and received_response.audio_data:
+                    audio_path = create_timestamped_filename(node_name, "wav")
+                    save_wav_file(
+                        audio_data=received_response.get_audio_bytes(),
+                        output_path=audio_path,
+                        sample_rate=received_response.sample_rate,
+                        channels=received_response.channels,
+                        sample_width=received_response.sample_width,
+                    )
+                    typer.echo(f"TTS audio path: {audio_path}")
         except Exception as e:
             typer.echo(f"Error during TTS request: {e}", err=True)
             raise typer.Exit(code=1)
@@ -272,11 +299,18 @@ def agent_command(
 
 @app.command(name="dictation")
 def dictation_command(
-    audio_path: str = typer.Argument(..., help="Path to the audio file"),
+    audio_file: str = typer.Argument(..., help="Path to the audio file"),
     profile: str = typer.Option(PROFILE_LOCAL, help="Profile to use (local or cloud)"),
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
 ) -> None:
     """Send a dictation request and wait for the response."""
+    from pathlib import Path
+
+    audio_path = Path(audio_file)
+    if not audio_path.exists():
+        typer.echo(f"Error: Audio file not found: {audio_path}", err=True)
+        raise typer.Exit(code=1)
+
     session_id = generate_unique_id()
     typer.echo(f"Sending dictation request with profile={profile}")
     typer.echo(f"Audio path: {audio_path}")
@@ -291,25 +325,32 @@ def dictation_command(
 
         def on_dictation_response(response: ContinuumDictationResponse) -> None:
             nonlocal received_content
-            typer.echo(f"Response: {response}")
+            typer.echo(f"Response: status={response.status}, content_length={len(response.content_text)}")
             typer.echo(f"Status: {response.status}")
 
             # Only exit when we reach completed status or encounter an error
             if response.status == DICTATION_STATUS_COMPLETED or response.error_code != ERROR_CODE_SUCCESS:
                 typer.echo(f"Error code: {response.error_code}")
                 typer.echo(f"Error message: {response.error_message}")
+                typer.echo(f"ASR duration: {response.asr_duration_seconds:.2f}s")
+                typer.echo(f"LLM duration: {response.llm_duration_seconds:.2f}s")
+                typer.echo(f"Total duration: {response.total_duration_seconds:.2f}s")
                 received_content = response.content_text
                 set_response_received()
 
         try:
+            # Load audio file and populate audio_data
+            audio_data, sample_rate, channels, sample_width = load_wav_file(audio_path)
+            request = ContinuumDictationRequest(session_id=session_id, language=language)
+            request.set_audio_bytes(audio_data)
+            request.sample_rate = sample_rate
+            request.channels = channels
+            request.sample_width = sample_width
+            request.format = DEFAULT_AUDIO_FORMAT
+
             async with continuum_client_connection() as client:
                 client.subscribe_dictation_streaming_response(on_dictation_streaming_response, profile)
                 client.subscribe_dictation_response(on_dictation_response, profile)
-                request = ContinuumDictationRequest(
-                    session_id=session_id,
-                    audio_path=audio_path,
-                    language=language,
-                )
                 client.publish_dictation_request(request, profile)
                 await asyncio.wait_for(response_received.wait(), timeout=60.0)
                 typer.echo(f"Dictation content: {received_content}")

@@ -7,7 +7,8 @@ import typer
 
 from continuum.asr import ContinuumAsrClient, FakeAsrClient, FasterWhisperAsrClient, OpenAiAsrClient
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
-from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_OPENAI
+from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_OPENAI, DEFAULT_AUDIO_FORMAT
+from continuum.utils import load_wav_file
 
 
 def asr_command(
@@ -33,7 +34,14 @@ def asr_command(
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
-    request = ContinuumAsrRequest(audio_path=str(audio_file.absolute()), language=language)
+    # Load audio file and populate audio_data
+    audio_data, sample_rate, channels, sample_width = load_wav_file(audio_file)
+    request = ContinuumAsrRequest(language=language)
+    request.set_audio_bytes(audio_data)
+    request.sample_rate = sample_rate
+    request.channels = channels
+    request.sample_width = sample_width
+    request.format = DEFAULT_AUDIO_FORMAT
 
     def streaming_callback(streaming_response: ContinuumAsrStreamingResponse) -> None:
         """Callback to display streaming responses."""
