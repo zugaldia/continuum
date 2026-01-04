@@ -20,13 +20,17 @@ class GoogleLlmNode(BaseLlmNode):
         model_name = self.model_name
         options = GoogleLlmOptions(api_key=api_key, model_name=model_name)
 
-        self._client = GoogleLlmClient(options=options)
-        self.get_logger().info(f"Google LLM node initialized: {options}")
+        try:
+            self._executor = GoogleLlmClient(options=options)
+            self.get_logger().info(f"Google LLM node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize Google LLM node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up Google LLM node resources."""
         self.get_logger().info("Google LLM node shutting down.")
-        self._client.shutdown()
+        if self._executor is not None:
+            self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

@@ -14,13 +14,15 @@ dependencies = [
     "faster-whisper~=1.2.1",
     "google-genai~=1.56.0",
     "kokoro~=0.9.4",
-    "librosa~=0.11.0",
     "mistune~=3.2.0",
     "ollama~=0.6.1",
     "openai~=2.14.0",
     "pydantic~=2.12.5",
+    "pydantic-ai~=1.39.0", # Switch to the pydantic-ai-slim [] format
+    "reachy-mini[gstreamer]~=1.2.6",
     "requests~=2.32.5",
     "roslibpy~=2.0.0",
+    "scipy~=1.16.3",
     "typer~=0.21.0",
     "websocket-client~=1.9.0",
 ]

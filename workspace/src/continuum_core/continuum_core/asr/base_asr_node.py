@@ -57,7 +57,7 @@ class BaseAsrNode(QueueNode, ABC):
 
     def _listener_callback(self, msg: AsrRequest) -> None:
         """Handle incoming ASR requests."""
-        self.get_logger().info(f"ASR request received with session_id: {msg.session_id}")
+        self._log_message_redacted(msg)
         sdk_request = ContinuumAsrRequest.from_ros(message_to_ordereddict(msg))
         self.receive_request(sdk_request)
 

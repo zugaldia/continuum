@@ -14,6 +14,11 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, Type, TypeVar
 
 import roslibpy
 
+from continuum.agent.models import (
+    ContinuumAgentRequest,
+    ContinuumAgentResponse,
+    ContinuumAgentStreamingResponse,
+)
 from continuum.apps.models import (
     ContinuumDictationRequest,
     ContinuumDictationResponse,
@@ -27,11 +32,15 @@ from continuum.asr.models import (
 from continuum.constants import (
     CONTINUUM_NAMESPACE,
     NODE_APP_DICTATION,
+    PATH_AGENT,
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
     PATH_TTS,
     PROFILE_LOCAL,
+    TOPIC_AGENT_REQUEST,
+    TOPIC_AGENT_RESPONSE,
+    TOPIC_AGENT_STREAMING_RESPONSE,
     TOPIC_ASR_REQUEST,
     TOPIC_ASR_RESPONSE,
     TOPIC_ASR_STREAMING_RESPONSE,
@@ -53,6 +62,7 @@ from continuum.llm.models import (
     ContinuumLlmResponse,
     ContinuumLlmStreamingResponse,
 )
+from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import (
     ContinuumTtsRequest,
     ContinuumTtsResponse,
@@ -209,15 +219,25 @@ class ContinuumClient:
         message_type = "diagnostic_msgs/DiagnosticArray"
         self._subscribe_topic(name, message_type, callback)
 
-    def subscribe_echo(self, callback: Callable[[str], None]) -> None:
+    def subscribe_echo(self, callback: Callable[[EchoResponse], None]) -> None:
         """Subscribe to the continuum echo response topic."""
-
-        def wrapped_callback(msg: Dict[str, Any]) -> None:
-            callback(msg["data"])
-
         name = f"/{CONTINUUM_NAMESPACE}/{TOPIC_ECHO_RESPONSE}"
-        message_type = "std_msgs/String"
-        self._subscribe_topic(name, message_type, wrapped_callback)
+        message_type = "continuum_interfaces/EchoResponse"
+        self._subscribe_topic_typed(name, message_type, callback, EchoResponse)
+
+    def subscribe_agent_response(self, node_name: str, callback: Callable[[ContinuumAgentResponse], None]) -> None:
+        """Subscribe to the agent response topic for the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_RESPONSE}"
+        message_type = "continuum_interfaces/AgentResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentResponse)
+
+    def subscribe_agent_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumAgentStreamingResponse], None]
+    ) -> None:
+        """Subscribe to the agent streaming response topic for the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/AgentStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentStreamingResponse)
 
     def subscribe_asr_response(self, node_name: str, callback: Callable[[ContinuumAsrResponse], None]) -> None:
         """Subscribe to the ASR response topic for the specified ASR node."""
@@ -294,11 +314,20 @@ class ContinuumClient:
         publisher.publish(message)
         return None
 
-    def publish_echo(self, message: str) -> None:
-        """Publish a message to the continuum echo request topic."""
+    def publish_echo(self, request: EchoRequest) -> None:
+        """Publish an echo request to the continuum echo request topic."""
         name = f"/{CONTINUUM_NAMESPACE}/{TOPIC_ECHO_REQUEST}"
-        message_type = "std_msgs/String"
-        self._publish_message(name, message_type, roslibpy.Message({"data": message}))
+        message_type = "continuum_interfaces/EchoRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
+        return None
+
+    def publish_agent_request(self, node_name: str, request: ContinuumAgentRequest) -> None:
+        """Publish an agent request to the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_REQUEST}"
+        message_type = "continuum_interfaces/AgentRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
         return None
 
     def publish_asr_request(self, node_name: str, request: ContinuumAsrRequest) -> None:

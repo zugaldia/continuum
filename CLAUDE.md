@@ -40,7 +40,8 @@ make format               # ruff format
 continuum asr <audio_file> --provider faster-whisper|openai
 continuum llm "<prompt>" --provider ollama|openai|google
 continuum tts "<text>" --provider kokoro|elevenlabs
-continuum ws echo|asr|llm|tts|dictation    # WebSocket commands
+continuum agent "<message>" --provider pydantic
+continuum ws echo|asr|llm|tts|agent|dictation    # WebSocket commands
 ```
 
 ## Architecture
@@ -60,7 +61,7 @@ This project is a monorepo with two main components:
 
 ### ROS topic naming convention
 Topics follow the pattern: `/continuum/<category>/<provider>/<topic_name>`
-- Categories: `asr`, `llm`, `tts`, `app`, `hardware`, `input`
+- Categories: `asr`, `llm`, `tts`, `agent`, `app`, `hardware`, `input`
 - Example: `/continuum/llm/ollama/llm_request`
 
 ### Node naming convention
@@ -68,6 +69,7 @@ Each provider node has a `<provider>_<type>_node` pattern:
 - `fasterwhisper_asr_node`, `openai_asr_node`
 - `ollama_llm_node`, `openai_llm_node`, `google_llm_node`
 - `kokoro_tts_node`, `elevenlabs_tts_node`
+- `pydantic_agent_node`
 
 ### Configuration
 Node parameters are configured in `continuum.yaml` at project root. The file uses ROS 2 parameter format with node
@@ -76,7 +78,7 @@ namespaces as keys:
 /continuum/llm/ollama/ollama_llm:
   ros__parameters:
     host: "http://localhost:11434"
-    model_name: "gemma3"
+    model_name: "gpt-oss"
 ```
 
 ### Request/Response flow

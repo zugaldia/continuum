@@ -5,10 +5,11 @@ from typing import Callable
 from typing import Optional
 
 from pydantic import BaseModel
-from rclpy.node import Node
 from rclpy.timer import Timer
 from reachy_mini import ReachyMini
 from reachy_mini.motion.recorded_move import RecordedMove, RecordedMoves
+
+from continuum_core.shared.base_node import BaseNode
 
 # Predefined emotions and dances
 REACHY_EMOTIONS_REPO_ID = "pollen-robotics/reachy-mini-emotions-library"
@@ -53,7 +54,7 @@ class ReachyMoves:
 
     def __init__(
         self,
-        node: Node,
+        node: BaseNode,
         core_loop: asyncio.AbstractEventLoop,
         get_mini: Callable[[], Optional[ReachyMini]],
     ):

@@ -44,11 +44,18 @@ class OpenAiLlmClient(ContinuumLlmClient):
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI
-        previous_response_id = none_if_empty(request.state_id) or Omit()
-        stateful = none_if_empty(request.state_id) is not None
+        previous_response_id = (
+            Omit()
+            # Do not add a response ID for custom/local endpoints (or if none is provided)
+            if (none_if_empty(self._options.base_url) is not None or none_if_empty(request.state_id) is None)
+            else request.state_id
+        )
+
+        self._logger.info(
+            f"New LLM request ({model_name}) for session_id (state={previous_response_id}): {request.session_id}"
+        )
 
         instructions = Omit() if is_empty(request.system_prompt) else request.system_prompt
-        self._logger.info(f"New LLM request ({model_name}) for session_id (stateful={stateful}): {request.session_id}")
         events = self._client.responses.create(
             model=model_name,
             instructions=instructions,

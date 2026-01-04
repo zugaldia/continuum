@@ -9,7 +9,9 @@ with a pluggable architecture that makes it easy to swap providers or add new ca
 
 ## Getting Started
 
-Start by setting up the local server using [these instructions](SERVER.md). This is the main system component.
+Start by setting up the local server using [Docker](docker/README.md).
+Alternatively, you can also set up everything manually using [these instructions](SERVER.md).
+This is the main system component.
 
 Typically, to integrate Continuum into your project, you would run the Continuum server locally and interact with it
 using the provided [CLI](CLI.md) or [Python client](./lib/src/continuum/client/client.py).
@@ -23,12 +25,20 @@ In alphabetic order.
 
 ### ASR (Automatic Speech Recognition)
 
+ASR converts audio files to text transcriptions using traditional speech-to-text models, making it useful for
+capturing what users have said in real-time or transcribing audio content. This approach does not (yet) support speech
+recognition via multimodal LLMs.
+
 | Provider       | Local or Cloud | Notes                                                                             |
 |----------------|----------------|-----------------------------------------------------------------------------------|
 | Faster Whisper | Local          | Fast OpenAI Whisper implementation with the same accuracy while using less memory |
 | OpenAI         | Cloud          | Hosted Whisper and GPT-4o transcription models                                    |
 
 ### LLM (Large Language Model)
+
+LLM support provides traditional text generation from prompts and user input, with conversation history available only
+when the provider supports it server-side. Advanced functionality like tool calling and MCP integration is handled by
+the agent subsystem described below.
 
 | Provider | Local or Cloud | Notes                                                                              |
 |----------|----------------|------------------------------------------------------------------------------------|
@@ -38,10 +48,22 @@ In alphabetic order.
 
 ### TTS (Text-to-Speech)
 
+TTS converts text into audio files using state-of-the-art generative models. We prioritize multilingual providers.
+
 | Provider   | Local or Cloud | Notes                                                                           |
 |------------|----------------|---------------------------------------------------------------------------------|
 | ElevenLabs | Cloud          | High-quality multilingual TTS with natural-sounding voices                      |
 | Kokoro     | Local          | Open-weight multilingual model with competitive performance on TTS leaderboards |
+
+### Agents
+
+Agents leverage the full functionality of LLMs with an agentic loop that integrates function calling through built-in
+tools, user-provided tools, and MCP servers. The LLM typically cycles through multiple iterations to build responses,
+with memory being automatically managed by the agentic framework.
+
+| Provider | Local or Cloud | Notes                                                                                                                                      |
+|----------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| Pydantic | Both           | AI framework from the creators of the popular Python library for data validation. Supports Anthropic, Google, Ollama, and OpenAI providers |
 
 ## Design Principles
 

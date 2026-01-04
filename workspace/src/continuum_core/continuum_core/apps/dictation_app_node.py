@@ -1,7 +1,7 @@
 """
 
 Applications are a special kind of node that not only extends the regular queuing infrastructure, they also implement
-the ContinuumClient execute_request function to kickstart/orchestrate the nodes they use to fulfill a request.
+the ContinuumExecutor execute_request function to kickstart/orchestrate the nodes they use to fulfill a request.
 
 """
 
@@ -45,7 +45,7 @@ from continuum.constants import (
     TOPIC_LLM_RESPONSE,
     TOPIC_LLM_STREAMING_RESPONSE,
 )
-from continuum.models import ContinuumClient
+from continuum.models import ContinuumExecutor
 from continuum.utils import none_if_empty
 from continuum_core.apps.base_app_node import BaseAppNode
 from continuum_core.prompts.dictation import DICTATION_PROMPT, DEFAULT_CONTEXT
@@ -70,7 +70,7 @@ class SessionState(BaseModel):
     asr_complete_time: Optional[float] = None
 
 
-class DictationAppNode(BaseAppNode, ContinuumClient):
+class DictationAppNode(BaseAppNode, ContinuumExecutor):
     _asr_publisher: Publisher[AsrRequest]
     _llm_publisher: Publisher[LlmRequest]
     _app_publisher: Publisher[DictationResponse]
@@ -86,7 +86,7 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
             description="Dictation app that processes audio through ASR then through LLM for copy editing.",
         )
 
-        self._client = self
+        self._executor = self
         self._session_state = {}
         self.get_logger().info(f"Dictation app node initialized with {self._asr_node}/{self._llm_node}.")
 
@@ -145,8 +145,8 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
 
     def _listener_callback(self, msg: DictationRequest) -> None:
         """Handle incoming dictation requests."""
+        self._log_message_redacted(msg)
         sdk_request = ContinuumDictationRequest.from_ros(message_to_ordereddict(msg))
-        self.get_logger().info(f"Dictation request received: {sdk_request}")
         self.receive_request(sdk_request)
 
     async def execute_request(
@@ -158,7 +158,15 @@ class DictationAppNode(BaseAppNode, ContinuumClient):
         self.add_active_session(request.session_id)
         self._session_state[request.session_id] = SessionState(request=request, start_time=time.time())
         self._asr_publisher.publish(
-            AsrRequest(session_id=request.session_id, audio_path=request.audio_path, language=request.language)
+            AsrRequest(
+                session_id=request.session_id,
+                audio_data=request.audio_data,
+                format=request.format,
+                channels=request.channels,
+                sample_rate=request.sample_rate,
+                sample_width=request.sample_width,
+                language=request.language,
+            )
         )
 
         # Publish (queued) update to consumers

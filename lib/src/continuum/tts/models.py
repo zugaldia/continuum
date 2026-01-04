@@ -1,6 +1,9 @@
+import base64
+from typing import Any, Dict
+
 from pydantic import BaseModel
 
-from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStreamingResponse
+from continuum.models import ContinuumResponse, ContinuumRequest, ContinuumStreamingResponse, AudioComponent
 
 
 class ContinuumTtsRequest(ContinuumRequest):
@@ -19,11 +22,20 @@ class ContinuumTtsRequest(ContinuumRequest):
 #
 
 
-class ContinuumTtsResponse(ContinuumResponse):
+class ContinuumTtsResponse(ContinuumResponse, AudioComponent):
     is_initial: bool = False
     is_final: bool = False
     order_id: int = 0
-    audio_path: str = ""
+
+    @classmethod
+    def from_ros(cls, msg: Dict[str, Any]) -> "ContinuumTtsResponse":
+        """Override to handle base64-encoded audio_data from rosbridge."""
+        # rosbridge encodes uint8[] as base64 strings
+        if "audio_data" in msg and isinstance(msg["audio_data"], str):
+            # Decode base64 string to bytes, then convert to list[int]
+            audio_bytes = base64.b64decode(msg["audio_data"])
+            msg["audio_data"] = list(audio_bytes)
+        return cls.model_validate(msg)
 
 
 class ContinuumTtsStreamingResponse(ContinuumStreamingResponse):

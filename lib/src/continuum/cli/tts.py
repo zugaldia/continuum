@@ -4,9 +4,15 @@ import asyncio
 
 import typer
 
-from continuum.constants import NODE_TTS_KOKORO, NODE_TTS_ELEVENLABS
+from continuum.constants import (
+    NODE_TTS_KOKORO,
+    NODE_TTS_ELEVENLABS,
+    PARAM_ELEVENLABS_VOICE_ID_DEFAULT,
+    DEFAULT_MODEL_NAME_ELEVENLABS,
+)
 from continuum.tts import ContinuumTtsClient, KokoroTtsClient, ElevenLabsTtsClient
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsStreamingResponse, ElevenLabsTtsOptions
+from continuum.utils import create_timestamped_filename, save_wav_file
 
 
 def tts_command(
@@ -14,8 +20,8 @@ def tts_command(
     provider: str = typer.Option(NODE_TTS_KOKORO, help="TTS provider to use"),
     language: str = typer.Option("", help="Language code in ISO-639-1 format (e.g. 'en'), empty for auto-detection"),
     api_key: str = typer.Option("", help="API key for cloud providers (ElevenLabs)"),
-    voice_id: str = typer.Option("", help="Voice ID for TTS providers (ElevenLabs)"),
-    model_name: str = typer.Option("", help="Model name for TTS providers"),
+    voice_id: str = typer.Option(PARAM_ELEVENLABS_VOICE_ID_DEFAULT, help="Voice ID for TTS providers"),
+    model_name: str = typer.Option(DEFAULT_MODEL_NAME_ELEVENLABS, help="Model name for TTS providers"),
 ) -> None:
     """Synthesize text to speech using TTS."""
     typer.echo(f"Synthesizing text using {provider} provider...")
@@ -48,7 +54,17 @@ def tts_command(
         if response.error_code != 0:
             typer.echo(f"Error during synthesis: {response.error_message}", err=True)
             raise typer.Exit(code=1)
-        typer.echo(f"Audio saved to: {response.audio_path}")
+
+        # Save audio data to file
+        audio_path = create_timestamped_filename(provider, "wav")
+        save_wav_file(
+            audio_data=response.get_audio_bytes(),
+            output_path=audio_path,
+            sample_rate=response.sample_rate,
+            channels=response.channels,
+            sample_width=response.sample_width,
+        )
+        typer.echo(f"Audio saved to: {audio_path}")
     except Exception as e:
         typer.echo(f"Error during synthesis: {e}", err=True)
         raise typer.Exit(code=1)

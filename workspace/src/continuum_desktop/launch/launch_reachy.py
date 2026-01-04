@@ -4,7 +4,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-from continuum.constants import CONTINUUM_NAMESPACE, PATH_HARDWARE, NODE_REACHY
+from continuum.constants import CONTINUUM_NAMESPACE, PATH_HARDWARE, NODE_REACHY, NODE_AGENT_PYDANTIC
 
 
 def get_config_file_argument():
@@ -34,6 +34,15 @@ def generate_launch_description():
         [
             # Config launch argument
             config_file_arg,
+            # Custom agent node
+            Node(
+                package="continuum_core",
+                executable="pydantic_agent_node",
+                name="pydantic_agent",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_HARDWARE}/{NODE_AGENT_PYDANTIC}",
+                parameters=parameters,
+            ),
+            # Reachy orchestrator node
             Node(
                 package="continuum_core",
                 executable="reachy_node",

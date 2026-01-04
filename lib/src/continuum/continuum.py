@@ -4,6 +4,7 @@ import logging
 
 import typer
 
+from continuum.cli.agent import agent_command
 from continuum.cli.asr import asr_command
 from continuum.cli.llm import llm_command
 from continuum.cli.tts import tts_command
@@ -21,6 +22,7 @@ def main() -> None:
     )
 
 
+app.command(name="agent")(agent_command)
 app.command(name="asr")(asr_command)
 app.command(name="llm")(llm_command)
 app.command(name="tts")(tts_command)

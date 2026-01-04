@@ -13,8 +13,9 @@ import collections
 import threading
 from abc import abstractmethod, ABC
 from concurrent.futures import Future
+from typing import Optional
 
-from continuum.models import ContinuumRequest, ContinuumClient, ContinuumResponse
+from continuum.models import ContinuumRequest, ContinuumExecutor, ContinuumResponse
 from continuum_core.shared.async_node import AsyncNode
 
 # The number of jobs this client can take in parallel. Generally speaking, cloud clients can take a higher number
@@ -29,7 +30,7 @@ MAX_REQUEST_QUEUE_SIZE = 10
 class QueueNode(AsyncNode, ABC):
     """Base class for all Continuum nodes that need access to the asyncio loop, with a queueing mechanism."""
 
-    _client: ContinuumClient
+    _executor: Optional[ContinuumExecutor] = None
 
     def __init__(self, node_name: str):
         super().__init__(node_name)
@@ -48,10 +49,16 @@ class QueueNode(AsyncNode, ABC):
         pass
 
     def _queue_request(self, sdk_request: ContinuumRequest) -> None:
+        if self._executor is None:
+            self.get_logger().error("Executor not initialized. Cannot process request.")
+            return
+
         def callback(streaming_response):
             return self.handle_streaming_result(streaming_response, sdk_request)
 
-        future = asyncio.run_coroutine_threadsafe(self._client.execute_request(sdk_request, callback), self._core_loop)
+        future = asyncio.run_coroutine_threadsafe(
+            self._executor.execute_request(sdk_request, callback), self._core_loop
+        )
         future.add_done_callback(lambda f: self.handle_result(f, sdk_request))
 
     def receive_request(self, sdk_request: ContinuumRequest) -> None:

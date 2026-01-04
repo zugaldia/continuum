@@ -1,9 +1,12 @@
 import logging
 from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rosidl_runtime_py.convert import message_to_ordereddict
 
 from continuum.constants import (
     PARAM_DEBUG_MODE,
@@ -12,7 +15,10 @@ from continuum.constants import (
     PARAM_NODE_DESCRIPTION_DEFAULT,
     PARAM_NODE_NAME,
     PARAM_NODE_NAME_DEFAULT,
+    PARAM_STORAGE_PATH,
+    PARAM_STORAGE_PATH_DEFAULT,
 )
+from continuum.utils import is_empty, get_data_path
 from continuum_core.shared import RosLogHandler
 
 
@@ -44,6 +50,11 @@ class BaseNode(Node):
         self.declare_parameter(
             PARAM_NODE_DESCRIPTION,
             PARAM_NODE_DESCRIPTION_DEFAULT,
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
+        )
+        self.declare_parameter(
+            PARAM_STORAGE_PATH,
+            PARAM_STORAGE_PATH_DEFAULT,
             ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
         )
 
@@ -104,6 +115,29 @@ class BaseNode(Node):
     def debug_mode(self) -> bool:
         """Get the debug mode setting."""
         return self._get_bool_param(PARAM_DEBUG_MODE)
+
+    @property
+    def storage_path(self) -> Path:
+        """Get the storage path setting with a fallback."""
+        param_value = self._get_str_param(PARAM_STORAGE_PATH)
+        storage_path = get_data_path() if is_empty(param_value) else Path(param_value)
+        node_path = storage_path / self.get_name()
+        node_path.mkdir(parents=True, exist_ok=True)
+        self.get_logger().info(f"Using storage path: {node_path}")
+        return node_path
+
+    def _log_message_redacted(self, message: Any) -> None:
+        """Log a ROS message, redacting sensitive data (audio_data arrays and API keys)."""
+        try:
+            msg_dict = message_to_ordereddict(message)
+            if "audio_data" in msg_dict:
+                msg_dict["audio_data"] = f"<{len(msg_dict['audio_data'])} bytes>"
+            if "api_key" in msg_dict:
+                api_key = str(msg_dict["api_key"])
+                msg_dict["api_key"] = f"{api_key[:5]}..." if len(api_key) > 5 else api_key
+            self.get_logger().info(f"Message (redacted): {msg_dict}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to log message with redaction: {e}")
 
     def destroy_node(self) -> None:
         """Clean up node resources."""

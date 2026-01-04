@@ -23,13 +23,17 @@ class KokoroTtsNode(BaseTtsNode):
             device=device,
         )
 
-        self._client = KokoroTtsClient(options=options)
-        self.get_logger().info(f"Kokoro TTS node initialized: {options}")
+        try:
+            self._executor = KokoroTtsClient(options=options)
+            self.get_logger().info(f"Kokoro TTS node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize Kokoro TTS node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up Kokoro TTS node resources."""
         self.get_logger().info("Kokoro TTS node shutting down.")
-        self._client.shutdown()
+        if self._executor is not None:
+            self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

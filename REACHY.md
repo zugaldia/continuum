@@ -13,7 +13,8 @@ Please note that currently, only the wireless version of Reachy has been tested.
 ## Prerequisites
 
 - A Reachy Mini robot :-) This should work with the simulator as well, but that has not been validated.
-- The Continuum Server must be installed using the provided [installation instructions](SERVER.md).
+- The Continuum Server must be running using [Docker](docker/README.md)
+or the [manual installation instructions](SERVER.md).
 - A standard joystick controller is required to trigger interactions with Reachy. There is currently no support for
 VAD or wake word activations (yet).
 
@@ -45,17 +46,67 @@ server. For example, for a full local experience with a custom prompt:
 /continuum/hardware/reachy/reachy:
   ros__parameters:
     asr_node: "fasterwhisper"
-    llm_node: "ollama"
+    agent_node: "pydantic"
     tts_node: "kokoro"
-    system_prompt_path: "/path/to/prompt.md"
+
+# Reachy Pydantic Agent node (hardware path)
+/continuum/hardware/pydantic/pydantic_agent:
+  ros__parameters:
+    provider_name: "ollama"
+    model_name: "gpt-oss"
+    base_url: "http://localhost:11434"
+    instructions_path: "reachy.md"  # Relative to $HOME/.local/share/continuum/pydantic_agent
+```
+
+The `instructions_path` is relative to the agent node storage path
+(typically `/home/$USER/.local/share/continuum/pydantic_agent`)
+
+3. (Optional) If you want to test audio playback (down button on the joystick), copy a `test.wav` file to the Reachy
+storage path folder. An example is provided in the assets folder, and you can copy it with:
+
+```bash
+make copy-test-audio
 ```
 
 ## Usage
 
-While the main server is running in one terminal window, open a second terminal window and launch the Reachy server:
+If you are launching the server using Docker, the Reachy nodes are launched automatically.
 
-```
+Otherwise, if you followed the manual installation instructions, while the main server is running in one terminal
+window, open a second terminal window and launch the Reachy server:
+
+```bash
 cd continuum/workspace/
 source install/setup.bash
 make launch-reachy
 ```
+
+## Known limitations
+
+In the current implementation, we do not use function calling to determine the Reachy emotion that goes with a
+response. Instead, we are using custom prompting to extract one, like in the following example:
+
+```markdown
+## RESPONSE EXAMPLES
+
+You can prefix responses with one emotion that reflects your mood.
+
+You can pick one from this list: [amazed], [anxiety], [attentive], [boredom], [calming], [cheerful], [come],
+[confused], [contempt], [curious], [dance], [disgusted], [displeased], [downcast], [dying], [electric], [enthusiastic],
+[exhausted], [fear], [frustrated], [furious], [go_away], [grateful], [helpful], [impatient], [indifferent],
+[inquiring], [irritated], [laughing], [lonely], [lost], [loving], [no], [no_excited], [no_sad], [oops], [proud],
+[rage], [relief], [reprimand], [resigned], [sad], [scared], [serenity], [shy], [sleep], [success], [surprised],
+[thoughtful], [tired], [uncertain], [uncomfortable], [understanding], [welcoming], [yes], [yes_sad].
+
+Examples:
+
+[amazed] Did you know it takes about 8 minutes for light to reach Earth from the Sun?
+[inquiring] Would you like to know more about how robots work?
+[laughing] Scientists do not trust atoms because they make up everything.
+[no] Pizza isn't a vegetable, no matter how much tomato sauce you add.
+[no_sad] Sorry, that's not something Demi can help with.
+[yes] That's right, Pluto was reclassified as a dwarf planet.
+```
+
+If you're looking for a starting prompt,
+[check this one out](https://github.com/pollen-robotics/reachy_mini_conversation_app/blob/develop/src/reachy_mini_conversation_app/prompts/default_prompt.txt). 

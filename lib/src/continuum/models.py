@@ -20,7 +20,13 @@ from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from continuum.constants import ERROR_CODE_SUCCESS
+from continuum.constants import (
+    ERROR_CODE_SUCCESS,
+    DEFAULT_AUDIO_FORMAT,
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_AUDIO_SAMPLE_RATE,
+    DEFAULT_AUDIO_SAMPLE_WIDTH,
+)
 from continuum.utils import generate_unique_id, generate_order_id, generate_timestamp
 
 
@@ -67,7 +73,7 @@ class ContinuumStreamingResponse(BaseModel):
         return cls.model_validate(msg)
 
 
-class ContinuumClient(ABC):
+class ContinuumExecutor(ABC):
     @abstractmethod
     async def execute_request(
         self,
@@ -78,6 +84,25 @@ class ContinuumClient(ABC):
 
     def shutdown(self):
         pass
+
+
+#
+# Audio
+#
+
+
+class AudioComponent(BaseModel):
+    audio_data: list[int] = []
+    format: str = DEFAULT_AUDIO_FORMAT
+    channels: int = DEFAULT_AUDIO_CHANNELS
+    sample_rate: int = DEFAULT_AUDIO_SAMPLE_RATE
+    sample_width: int = DEFAULT_AUDIO_SAMPLE_WIDTH
+
+    def get_audio_bytes(self) -> bytes:
+        return bytes(self.audio_data)
+
+    def set_audio_bytes(self, audio_bytes: bytes) -> None:
+        self.audio_data = list(audio_bytes)
 
 
 #
@@ -117,3 +142,16 @@ class JoystickAxis(Enum):
     AXIS_RIGHT = "AXIS_RIGHT"
     AXIS_UP = "AXIS_UP"
     AXIS_DOWN = "AXIS_DOWN"
+
+
+#
+# Echo
+#
+
+
+class EchoRequest(ContinuumRequest):
+    message: str
+
+
+class EchoResponse(ContinuumResponse):
+    message: str

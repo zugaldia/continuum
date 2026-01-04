@@ -1,0 +1,16 @@
+services:
+  continuum:
+    container_name: continuum
+    image: continuum:latest
+    build: .
+    # Use host network to connect to Reachy Mini on LAN and expose WebSocket on host's port 9090
+    network_mode: host
+    environment:
+      - CONTINUUM_DATA_PATH=/app/data
+    volumes:
+      - ./continuum.yaml:/app/continuum.yaml:ro
+      - ${HOME}/.local/share/continuum:/app/data
+    # Enable USB joystick access for ROS joy_node
+    devices:
+      - /dev/input:/dev/input
+    privileged: true

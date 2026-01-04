@@ -1,0 +1,12 @@
+*.pyc
+.git/
+.gitignore
+.idea/
+.mypy_cache/
+.ruff_cache/
+BACKLOG.md
+__pycache__/
+continuum.yaml
+workspace/**/build/
+workspace/**/install/
+workspace/**/log/
