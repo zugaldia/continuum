@@ -1,4 +1,6 @@
 *.pyc
+.git/
+.gitignore
 .idea/
 .mypy_cache/
 .ruff_cache/

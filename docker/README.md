@@ -6,6 +6,10 @@ pre-built and ready to use.
 
 Alternatively, you can install Continuum directly on your local machine following [these steps](../SERVER.md).
 
+**Note on Image Size:** The Docker image is currently 10GB+ in size. Ensure you have sufficient disk space
+available for building and storing the image. The current setup is open for contributions from those familiar with
+Docker to help optimize and reduce the image size.
+
 ## What's Included
 
 The Docker container includes:
@@ -21,12 +25,16 @@ making all services accessible via `ws://localhost:9090`.
 
 ### Configuration
 
-The container uses the `continuum.yaml` file from the project root for configuration. To modify provider settings 
-or add API keys, copy the template and edit it before building the container:
+The container uses the `continuum.yaml` file from the project root for configuration. This file is mounted as a
+read-only volume, so you can modify provider settings or add API keys at any time without rebuilding the image.
+
+To get started, copy the template to the project root:
 
 ```
 cp ./workspace/src/continuum_desktop/config/continuum.yaml continuum.yaml
 ```
+
+After making changes to `continuum.yaml` restart the container to apply them.
 
 ### Build the Docker Image
 

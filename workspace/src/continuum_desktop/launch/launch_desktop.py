@@ -21,6 +21,8 @@ from continuum.constants import (
     PROFILE_LOCAL,
     PROFILE_CLOUD,
     PATH_INPUT,
+    PATH_AGENT,
+    NODE_AGENT_PYDANTIC,
 )
 
 
@@ -131,6 +133,14 @@ def generate_launch_description():
                 executable="elevenlabs_tts_node",
                 name="elevenlabs_tts",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_TTS}/{NODE_TTS_ELEVENLABS}",
+                parameters=parameters,
+            ),
+            # Agent nodes
+            Node(
+                package="continuum_core",
+                executable="pydantic_agent_node",
+                name="pydantic_agent",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{NODE_AGENT_PYDANTIC}",
                 parameters=parameters,
             ),
             # App nodes
