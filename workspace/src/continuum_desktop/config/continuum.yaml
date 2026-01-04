@@ -1,10 +1,12 @@
 # Continuum desktop parameters configuration
 # This file manages the parameters for all nodes in the system
+# DO NOT change this file directly. For custom configuration, make a copy on the root of the project.
 
 # /** applies to all nodes
 /**:
   ros__parameters:
     debug_mode: false
+    storage_path: ""
 
 # Joystick node
 /continuum/input/joy:
@@ -59,13 +61,13 @@
     model_name: "gemini-3-flash-preview"
 
 # Pydantic Agent node
-/continuum/agent/pydantic/pydantic_agent_node:
+/continuum/agent/pydantic/pydantic_agent:
   ros__parameters:
     provider_name: "ollama"
     model_name: "gpt-oss"
     api_key: ""
     base_url: "http://localhost:11434/v1"
-    instructions: "You are a helpful assistant."
+    instructions_path: ""  # Relative to $HOME/.local/share/continuum/pydantic_agent
     enable_web_search_tool: false
     enable_web_fetch_tool: false
     enable_memory_tool: false
@@ -92,6 +94,18 @@
 /continuum/hardware/reachy/reachy:
   ros__parameters:
     asr_node: "fasterwhisper"
+    agent_node: "pydantic"
     tts_node: "kokoro"
-    llm_node: "ollama"
-    system_prompt_path: ""
+
+# Reachy Pydantic Agent node (hardware path)
+/continuum/hardware/pydantic/pydantic_agent:
+  ros__parameters:
+    provider_name: "ollama"
+    model_name: "gpt-oss"
+    api_key: ""
+    base_url: "http://localhost:11434/v1"
+    instructions_path: ""  # Relative to $HOME/.local/share/continuum/pydantic_agent
+    enable_web_search_tool: false
+    enable_web_fetch_tool: false
+    enable_memory_tool: false
+    enable_file_search_tool: false

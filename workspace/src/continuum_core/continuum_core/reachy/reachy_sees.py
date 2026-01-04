@@ -7,10 +7,10 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel
-from rclpy.node import Node
 from reachy_mini import ReachyMini
 
 from continuum.utils import create_timestamped_filename
+from continuum_core.shared.base_node import BaseNode
 
 
 class ReachySeesState(BaseModel):
@@ -24,7 +24,7 @@ class ReachySees:
 
     def __init__(
         self,
-        node: Node,
+        node: BaseNode,
         core_loop: asyncio.AbstractEventLoop,
         get_mini: Callable[[], Optional[ReachyMini]],
     ):
@@ -52,7 +52,7 @@ class ReachySees:
             return None
 
         try:
-            filepath = create_timestamped_filename("reachy_photo", "png")
+            filepath = create_timestamped_filename("reachy_photo", "png", directory=self._node.storage_path)
             cv2.imwrite(str(filepath), frame)
             self._logger.info(f"Photo saved to {filepath}")
             return filepath

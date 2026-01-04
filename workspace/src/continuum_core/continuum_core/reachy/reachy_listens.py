@@ -1,18 +1,16 @@
 import asyncio
 from collections import deque
-from pathlib import Path
 from typing import Callable
 from typing import Optional, Deque
 
 import numpy as np
 import numpy.typing as npt
-import soundfile as sf
 from pydantic import BaseModel
-from rclpy.node import Node
 from rclpy.timer import Timer
 from reachy_mini import ReachyMini
 
-from continuum.utils import create_timestamped_filename
+from continuum_core.reachy.models import ReachyAudio
+from continuum_core.shared.base_node import BaseNode
 
 # Audio recording configuration (poll every 10ms to capture samples)
 # Reachy produces ~20ms audio chunks, so poll at least 2x that rate
@@ -36,7 +34,7 @@ class ReachyListens:
 
     def __init__(
         self,
-        node: Node,
+        node: BaseNode,
         core_loop: asyncio.AbstractEventLoop,
         get_mini: Callable[[], Optional[ReachyMini]],
     ):
@@ -91,8 +89,8 @@ class ReachyListens:
         self._audio_buffer.clear()
         self._state.is_recording = True
 
-    def stop_recording(self) -> Optional[Path]:
-        """Stop recording and return the path to the saved audio file."""
+    def stop_recording(self) -> Optional[ReachyAudio]:
+        """Stop recording and return the audio data as a ReachyAudio object."""
         mini = self._get_mini()
         if mini is None:
             self._logger.warning("Reachy Mini not connected.")
@@ -113,8 +111,16 @@ class ReachyListens:
 
         # See: https://github.com/pollen-robotics/reachy_mini/blob/develop/examples/debug/sound_record.py
         audio_data = np.concatenate(list(self._audio_buffer), axis=0)
-        output_path = create_timestamped_filename("reachy_audio", "wav")
-        sf.write(str(output_path), audio_data, sample_rate_input)
+        audio_bytes = audio_data.tobytes()
+        sample_width = audio_data.dtype.itemsize  # Sample width: float32 = 4 bytes per sample
+        self._logger.info(
+            f"Audio captured: {len(audio_bytes)} bytes "
+            f"({channels_input} channels, {sample_rate_input} Hz, {sample_width} bytes/sample)"
+        )
 
-        self._logger.info(f"Audio saved to {output_path} ({channels_input} channels, {sample_rate_input} Hz)")
-        return output_path
+        return ReachyAudio(
+            audio_data=audio_bytes,
+            sample_rate=sample_rate_input,
+            channels=channels_input,
+            sample_width=sample_width,
+        )

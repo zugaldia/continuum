@@ -1,7 +1,7 @@
-from pathlib import Path
 from typing import Optional
 
 import rclpy
+import soundfile as sf
 from pydantic import BaseModel
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
@@ -18,22 +18,23 @@ from continuum.constants import (
     PARAM_ASR_NODE_DEFAULT,
     PARAM_TTS_NODE,
     PARAM_TTS_NODE_DEFAULT,
-    PARAM_LLM_NODE,
-    PARAM_LLM_NODE_DEFAULT,
-    PARAM_SYSTEM_PROMPT_PATH,
-    PARAM_SYSTEM_PROMPT_PATH_DEFAULT,
+    PARAM_AGENT_NODE,
+    PARAM_AGENT_NODE_DEFAULT,
     PATH_ASR,
     PATH_TTS,
-    PATH_LLM,
-    TOPIC_LLM_REQUEST,
+    TOPIC_AGENT_REQUEST,
     TOPIC_ASR_REQUEST,
     TOPIC_ASR_RESPONSE,
     TOPIC_TTS_REQUEST,
     TOPIC_TTS_RESPONSE,
-    TOPIC_LLM_RESPONSE,
-    TOPIC_LLM_STREAMING_RESPONSE,
+    TOPIC_AGENT_RESPONSE,
+    TOPIC_AGENT_STREAMING_RESPONSE,
     ERROR_CODE_SUCCESS,
-    NODE_LLM_MAPGPT,
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_AUDIO_SAMPLE_RATE,
+    DEFAULT_AUDIO_SAMPLE_WIDTH,
+    DEFAULT_AUDIO_FORMAT,
+    PATH_HARDWARE,
 )
 from continuum.models import JoystickAxis, JoystickButton
 from continuum.utils import (
@@ -44,22 +45,22 @@ from continuum.utils import (
     generate_order_id,
     compute_elapsed_ms,
 )
-from continuum_core.reachy.prompts import SYSTEM_PROMPT
+from continuum_core.reachy.models import ReachyAudio
 from continuum_core.reachy.reachy_listens import ReachyListens
 from continuum_core.reachy.reachy_moves import ReachyMoves
 from continuum_core.reachy.reachy_sees import ReachySees
-from continuum_core.reachy.reachy_speaks import ReachySpeaks, ReachyAudio
+from continuum_core.reachy.reachy_speaks import ReachySpeaks
 from continuum_core.shared.async_node import AsyncNode
 from continuum_interfaces.msg import (
     JoystickButtonEvent,
     JoystickAxisEvent,
     AsrRequest,
     TtsRequest,
-    LlmRequest,
+    AgentRequest,
     AsrResponse,
     TtsResponse,
-    LlmResponse,
-    LlmStreamingResponse,
+    AgentResponse,
+    AgentStreamingResponse,
 )
 
 # Connection configuration
@@ -70,18 +71,17 @@ class ReachyState(BaseModel):
     """Tracks the state for Reachy."""
 
     active_session_id: Optional[str] = None
-    state_id: Optional[str] = None  # LLM memory
+    state_id: Optional[str] = None  # Agent memory
     request_timestamp: Optional[int] = None  # Timestamp from the initial ASR request (nanoseconds)
 
 
 class ReachyNode(AsyncNode):
     _asr_publisher: Publisher[AsrRequest]
     _tts_publisher: Publisher[TtsRequest]
-    _llm_publisher: Publisher[LlmRequest]
+    _agent_publisher: Publisher[AgentRequest]
     _asr_node: str
     _tts_node: str
-    _llm_node: str
-    _system_prompt_path: str
+    _agent_node: str
 
     def __init__(self) -> None:
         super().__init__("reachy_node")
@@ -104,28 +104,11 @@ class ReachyNode(AsyncNode):
                 description = self._reachy_moves.recorded_dances.get(dance_id).description
                 self.get_logger().info(f"- Dance: {dance_id}: {description}")
 
-        self.get_logger().info("Reachy node initialized.")
+        self.get_logger().info(f"Reachy node initialized ({self.storage_path}).")
 
     def _get_mini(self) -> Optional[ReachyMini]:
         """Get the Reachy Mini instance."""
         return self._mini
-
-    def _load_system_prompt(self) -> str:
-        """Load the system prompt from a file or use default."""
-        if is_empty(self._system_prompt_path):
-            self.get_logger().info("Using default system prompt")
-            return SYSTEM_PROMPT
-
-        try:
-            # We need to start caching this content
-            prompt_path = Path(self._system_prompt_path)
-            self.get_logger().info(f"Loading system prompt from: {prompt_path}")
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                prompt = f.read().strip()
-            return prompt
-        except Exception as e:
-            self.get_logger().error(f"Error loading system prompt from {self._system_prompt_path}: {e}")
-            return SYSTEM_PROMPT
 
     def register_parameters(self) -> None:
         """Register the dictation app parameters."""
@@ -137,19 +120,13 @@ class ReachyNode(AsyncNode):
             PARAM_TTS_NODE, PARAM_TTS_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         self.declare_parameter(
-            PARAM_LLM_NODE, PARAM_LLM_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
-        )
-        self.declare_parameter(
-            PARAM_SYSTEM_PROMPT_PATH,
-            PARAM_SYSTEM_PROMPT_PATH_DEFAULT,
-            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
+            PARAM_AGENT_NODE, PARAM_AGENT_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
 
         # Set node names before registering any publishers/subscribers
         self._asr_node = self._get_str_param(PARAM_ASR_NODE)
         self._tts_node = self._get_str_param(PARAM_TTS_NODE)
-        self._llm_node = self._get_str_param(PARAM_LLM_NODE)
-        self._system_prompt_path = self._get_str_param(PARAM_SYSTEM_PROMPT_PATH)
+        self._agent_node = self._get_str_param(PARAM_AGENT_NODE)
 
     def register_publishers(self) -> None:
         # Ability to issue ASR requests
@@ -160,9 +137,9 @@ class ReachyNode(AsyncNode):
         topic_tts_request = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{self._tts_node}/{TOPIC_TTS_REQUEST}"
         self._tts_publisher = self.create_publisher(TtsRequest, topic_tts_request, QOS_DEPTH_DEFAULT)
 
-        # Ability to issue LLM requests
-        topic_llm_request = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_REQUEST}"
-        self._llm_publisher = self.create_publisher(LlmRequest, topic_llm_request, QOS_DEPTH_DEFAULT)
+        # Ability to issue agent requests
+        topic_agent_request = f"/{CONTINUUM_NAMESPACE}/{PATH_HARDWARE}/{self._agent_node}/{TOPIC_AGENT_REQUEST}"
+        self._agent_publisher = self.create_publisher(AgentRequest, topic_agent_request, QOS_DEPTH_DEFAULT)
 
     def register_subscribers(self) -> None:
         """Register the reachy request subscriber."""
@@ -187,16 +164,16 @@ class ReachyNode(AsyncNode):
         topic_tts_response = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{self._tts_node}/{TOPIC_TTS_RESPONSE}"
         self.create_subscription(TtsResponse, topic_tts_response, self._on_tts_response, QOS_DEPTH_DEFAULT)
 
-        # Listen to LLM responses
-        topic_llm_response = f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_RESPONSE}"
-        self.create_subscription(LlmResponse, topic_llm_response, self._on_llm_response, QOS_DEPTH_DEFAULT)
+        # Listen to agent responses
+        topic_agent_response = f"/{CONTINUUM_NAMESPACE}/{PATH_HARDWARE}/{self._agent_node}/{TOPIC_AGENT_RESPONSE}"
+        self.create_subscription(AgentResponse, topic_agent_response, self._on_agent_response, QOS_DEPTH_DEFAULT)
 
-        # Listen to LLM streaming responses
-        topic_llm_streaming_response = (
-            f"/{CONTINUUM_NAMESPACE}/{PATH_LLM}/{self._llm_node}/{TOPIC_LLM_STREAMING_RESPONSE}"
+        # Listen to agent streaming responses
+        topic_agent_streaming_response = (
+            f"/{CONTINUUM_NAMESPACE}/{PATH_HARDWARE}/{self._agent_node}/{TOPIC_AGENT_STREAMING_RESPONSE}"
         )
         self.create_subscription(
-            LlmStreamingResponse, topic_llm_streaming_response, self._on_llm_streaming_response, QOS_DEPTH_DEFAULT
+            AgentStreamingResponse, topic_agent_streaming_response, self._on_agent_streaming_response, QOS_DEPTH_DEFAULT
         )
 
     def _connect(self) -> None:
@@ -208,7 +185,7 @@ class ReachyNode(AsyncNode):
             try:
                 # Allow connecting to Reachy Mini on the local network
                 self.get_logger().info(f"Connecting to Reachy Mini (attempt {attempt}/{REACHY_CONNECTION_RETRIES}).")
-                self._mini = ReachyMini(localhost_only=False)
+                self._mini = ReachyMini(connection_mode="network")
                 self.get_logger().info("Reachy Mini connected.")
                 self._reachy_listens.start_listening_timer()
                 self._reachy_moves.start_movement_timer()
@@ -249,12 +226,19 @@ class ReachyNode(AsyncNode):
                 return
             self._reachy_listens.start_recording()
         elif msg.button == JoystickButton.BUTTON_X.value:
-            output_path = self._reachy_listens.stop_recording()
-            if output_path:
+            reachy_audio = self._reachy_listens.stop_recording()
+            if reachy_audio:
                 self._state.active_session_id = generate_unique_id()
                 self._reachy_speaks.clear_audio_queue()
+
                 asr_request = AsrRequest(
-                    session_id=self._state.active_session_id, audio_path=str(output_path), language="en"
+                    session_id=self._state.active_session_id,
+                    audio_data=list(reachy_audio.audio_data),
+                    format=DEFAULT_AUDIO_FORMAT,
+                    channels=reachy_audio.channels,
+                    sample_rate=reachy_audio.sample_rate,
+                    sample_width=reachy_audio.sample_width,
+                    language="en",
                 )
                 self._state.request_timestamp = asr_request.timestamp
                 self.get_logger().info(f"Recording stopped, starting ASR for session {self._state.active_session_id}")
@@ -268,11 +252,7 @@ class ReachyNode(AsyncNode):
         elif msg.axis == JoystickAxis.AXIS_UP.value:
             self._reachy_sees.take_photo()
         elif msg.axis == JoystickAxis.AXIS_DOWN.value:
-            # Project root is 6 levels up from this file
-            project_root = Path(__file__).resolve().parents[5]
-            jfk_path = project_root / "assets" / "audio" / "jfk.wav"
-            self._reachy_speaks.clear_audio_queue()
-            self._reachy_speaks.queue_audio(ReachyAudio(audio_path=jfk_path, is_initial=True))
+            self._play_test_audio()
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
         if msg.session_id != self._state.active_session_id:
@@ -285,11 +265,9 @@ class ReachyNode(AsyncNode):
             return
 
         state_id = none_if_empty(self._state.state_id) or ""
-        system_prompt = self._load_system_prompt()
-        self._llm_publisher.publish(
-            LlmRequest(
+        self._agent_publisher.publish(
+            AgentRequest(
                 session_id=self._state.active_session_id,
-                system_prompt=system_prompt,
                 state_id=state_id,
                 content_text=msg.transcription,
             )
@@ -310,27 +288,27 @@ class ReachyNode(AsyncNode):
         cleaned_text = text[closing_bracket_index + 1 :].strip()
         return (emotion, cleaned_text) if emotion else (None, text)
 
-    def _on_llm_response(self, msg: LlmResponse) -> None:
+    def _on_agent_response(self, msg: AgentResponse) -> None:
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
 
         elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
-        self.get_logger().info(f"Received LLM response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
+        self.get_logger().info(f"Received agent response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
 
         if msg.error_code != ERROR_CODE_SUCCESS:
-            self.get_logger().error(f"LLM error: {msg.error_message}")
+            self.get_logger().error(f"Agent error: {msg.error_message}")
             return
 
-        # Each LLM response creates a new ID that we need to pass to the next request
+        # Each agent response creates a new ID that we need to pass to the next request
         self._state.state_id = msg.state_id
 
         if is_empty(msg.content_text):
             # The content is in the streaming responses instead.
-            self.get_logger().warning("LLM response is empty.")
+            self.get_logger().warning("Agent response is empty.")
             return
 
         try:
-            # Extract optional emotion keyword from the LLM response
+            # Extract optional emotion keyword from the agent response
             emotion, content_without_emotion = self._extract_emotion(msg.content_text)
             if emotion:
                 emotion_id = f"{emotion}1"
@@ -338,7 +316,7 @@ class ReachyNode(AsyncNode):
                     self.get_logger().info(f"Detected emotion: {emotion_id}")
                     self._reachy_moves.do_move(emotion_id, self._reachy_moves.recorded_emotions.get(emotion_id))
 
-            # Instead of sending the raw response from the LLM, which is generally multi-line and Markdown formatted,
+            # Instead of sending the raw response from the agent, which is generally multi-line and Markdown formatted,
             # we create a plain text version with the same original lines and submit smaller requests to the TTS engine
             # to reduce the latency of the (initial) response.
             text = strip_markdown(content_without_emotion)
@@ -359,7 +337,7 @@ class ReachyNode(AsyncNode):
                 )
         except Exception as e:
             # Send the raw response in case of an error as a fallback.
-            self.get_logger().warning(f"Failed to process LLM response: {e}")
+            self.get_logger().warning(f"Failed to process agent response: {e}")
             self._tts_publisher.publish(
                 TtsRequest(
                     session_id=self._state.active_session_id,
@@ -371,34 +349,22 @@ class ReachyNode(AsyncNode):
                 )
             )
 
-    def _on_llm_streaming_response(self, msg: LlmStreamingResponse) -> None:
-        """Callback for LLM streaming responses."""
+    def _on_agent_streaming_response(self, msg: AgentStreamingResponse) -> None:
+        """Callback for agent streaming responses."""
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
-        if self._llm_node not in [NODE_LLM_MAPGPT]:
-            return  # We only support streaming responses for MapGPT at the moment
 
         elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
-        self.get_logger().info(f"Received LLM streaming response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
-
+        self.get_logger().info(f"Received agent streaming response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
         self._reachy_moves.do_random_emotion()
-        self._tts_publisher.publish(
-            TtsRequest(
-                session_id=self._state.active_session_id,
-                is_initial=msg.is_initial,
-                is_final=msg.is_final,
-                order_id=msg.order_id,
-                text=msg.content_text,
-                language="en",
-            )
-        )
 
     def _on_tts_response(self, msg: TtsResponse) -> None:
         if msg.session_id != self._state.active_session_id:
             return  # Ignore all responses but ours
 
         elapsed_ms = compute_elapsed_ms(self._state.request_timestamp, msg.timestamp)
-        self.get_logger().info(f"Received TTS response: {msg} (elapsed: {elapsed_ms:.0f}ms)")
+        self.get_logger().info(f"Received TTS response (elapsed: {elapsed_ms:.0f}ms)")
+        self._log_message_redacted(msg)
         if msg.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"TTS error: {msg.error_message}")
             return
@@ -406,7 +372,10 @@ class ReachyNode(AsyncNode):
         # Pass the TTS response to ReachySpeaks for buffering and ordered playback
         self._reachy_speaks.queue_audio(
             ReachyAudio(
-                audio_path=Path(msg.audio_path),
+                audio_data=bytes(msg.audio_data),
+                sample_rate=msg.sample_rate,
+                channels=msg.channels,
+                sample_width=msg.sample_width,
                 order_id=msg.order_id,
                 is_initial=msg.is_initial,
             )
@@ -417,6 +386,33 @@ class ReachyNode(AsyncNode):
         self._state.active_session_id = None
         self._state.request_timestamp = None
         self.get_logger().info("Session complete, active_session_id cleared")
+
+    def _play_test_audio(self) -> None:
+        try:
+            # Load test audio file and extract raw PCM data (see assets/audio for examples)
+            # It assumes test.wav is mono, 16 kHz, 16-bit
+            test_path = self.storage_path / "test.wav"
+            if not test_path.exists():
+                self.get_logger().warning(
+                    f"Test audio file not found at {test_path}. "
+                    "Place a mono, 16kHz, 16-bit WAV file there to enable test audio playback."
+                )
+                return
+
+            audio_data, _ = sf.read(test_path, dtype="int16")
+            test_audio_data = audio_data.tobytes()
+            self._reachy_speaks.clear_audio_queue()
+            self._reachy_speaks.queue_audio(
+                ReachyAudio(
+                    audio_data=test_audio_data,
+                    sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
+                    channels=DEFAULT_AUDIO_CHANNELS,
+                    sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,
+                    is_initial=True,
+                )
+            )
+        except Exception as e:
+            self.get_logger().error(f"Failed to play test audio: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up reachy node resources."""
