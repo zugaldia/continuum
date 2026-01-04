@@ -8,3 +8,4 @@ bool is_final          # True if this is the last message in the stream
 int64 order_id         # Sortable order ID (nanosecond timestamp)
 int32 error_code       # Error code (0 = no error)
 string error_message   # Error message (default: "All systems nominal")
+string content_text    # Incremental response content from the agent

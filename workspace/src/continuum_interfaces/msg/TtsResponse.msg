@@ -8,4 +8,8 @@ string error_message  # Error message (default: "All systems nominal")
 bool is_initial       # True if this is the first message in the stream
 bool is_final         # True if this is the last message in the stream
 int64 order_id        # Sortable order ID (nanosecond timestamp)
-string audio_path     # Path to the generated audio file
+uint8[] audio_data    # Raw PCM audio data as a byte array
+string format         # Audio format (only PCM is supported at the moment)
+uint8 channels        # Number of audio channels (typically 1 for mono)
+uint32 sample_rate    # Audio sample rate in Hz (typically 16000 for speech)
+uint8 sample_width    # Sample width in bytes (typically 2 for 16-bit audio)
