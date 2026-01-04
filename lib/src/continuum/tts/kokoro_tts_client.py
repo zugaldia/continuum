@@ -1,14 +1,20 @@
 import logging
-from pathlib import Path
+from io import BytesIO
 from typing import Callable, Generator, Optional, Dict
 
-import librosa
 import numpy
 import soundfile as sf
 import torch
 from kokoro import KPipeline
+from scipy import signal
 
-from continuum.constants import ERROR_CODE_UNEXPECTED
+from continuum.constants import (
+    ERROR_CODE_UNEXPECTED,
+    DEFAULT_AUDIO_SAMPLE_RATE,
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_AUDIO_SAMPLE_WIDTH,
+    DEFAULT_AUDIO_FORMAT,
+)
 from continuum.tts.models import (
     ContinuumTtsResponse,
     ContinuumTtsRequest,
@@ -16,13 +22,10 @@ from continuum.tts.models import (
     KokoroTtsOptions,
 )
 from continuum.tts.tts_client import ContinuumTtsClient
-from continuum.utils import none_if_empty, create_timestamped_filename, is_empty
+from continuum.utils import none_if_empty, is_empty
 
 # Kokoro's native sample rate (hardcoded in the model, cannot be changed)
 KOKORO_NATIVE_SAMPLE_RATE = 24000
-
-# Target sample rate for output audio files
-TARGET_SAMPLE_RATE = 16000
 
 
 class KokoroTtsClient(ContinuumTtsClient):
@@ -87,16 +90,16 @@ class KokoroTtsClient(ContinuumTtsClient):
         graphemes: str
         phonemes: str
         audio: Optional[torch.FloatTensor]
-        audio_path: Optional[Path] = None
+        audio_data: Optional[bytes] = None
         for chunk_index, (graphemes, phonemes, audio) in enumerate(generator):
-            resampled_audio = self._resample(audio.numpy())
-            audio_path = create_timestamped_filename("kokoro", "wav")
-            self._logger.info(f"Writing {audio_path}")
             self._logger.debug(f"Chunk {chunk_index}: {graphemes} -> {phonemes}")
-            sf.write(audio_path, resampled_audio, TARGET_SAMPLE_RATE)
+            resampled_audio: numpy.ndarray = self._resample(audio.numpy())
+            buffer = BytesIO()
+            sf.write(buffer, resampled_audio, DEFAULT_AUDIO_SAMPLE_RATE, format="RAW", subtype="PCM_16")
+            audio_data = buffer.getvalue()
             break  # With split_pattern=None, all text is processed as a single chunk
 
-        if audio_path is None:
+        if audio_data is None:
             return ContinuumTtsResponse(
                 session_id=request.session_id,
                 is_initial=request.is_initial,
@@ -106,17 +109,24 @@ class KokoroTtsClient(ContinuumTtsClient):
                 error_message="No audio generated.",
             )
         else:
-            return ContinuumTtsResponse(
+            response = ContinuumTtsResponse(
                 session_id=request.session_id,
                 is_initial=request.is_initial,
                 is_final=request.is_final,
                 order_id=request.order_id,
-                audio_path=str(audio_path),
+                format=DEFAULT_AUDIO_FORMAT,
+                channels=DEFAULT_AUDIO_CHANNELS,
+                sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
+                sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,
             )
+            response.set_audio_bytes(audio_data)
+            return response
 
     @staticmethod
-    def _resample(data: numpy.ndarray):
-        return librosa.resample(data, orig_sr=KOKORO_NATIVE_SAMPLE_RATE, target_sr=TARGET_SAMPLE_RATE)
+    def _resample(data: numpy.ndarray) -> numpy.ndarray:
+        # Resample from 24kHz to 16kHz using scipy (3:2 ratio)
+        # Using resample_poly for efficiency with integer ratios
+        return signal.resample_poly(data, up=2, down=3)
 
     def shutdown(self) -> None:
         """Shutdown the TTS client and clean up resources."""

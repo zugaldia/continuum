@@ -23,8 +23,8 @@ from continuum.constants import (
     PARAM_AGENT_API_KEY_DEFAULT,
     PARAM_AGENT_BASE_URL,
     PARAM_AGENT_BASE_URL_DEFAULT,
-    PARAM_AGENT_INSTRUCTIONS,
-    PARAM_AGENT_INSTRUCTIONS_DEFAULT,
+    PARAM_AGENT_INSTRUCTIONS_PATH,
+    PARAM_AGENT_INSTRUCTIONS_PATH_DEFAULT,
     PARAM_AGENT_ENABLE_WEB_SEARCH_TOOL,
     PARAM_AGENT_ENABLE_WEB_SEARCH_TOOL_DEFAULT,
     PARAM_AGENT_ENABLE_WEB_FETCH_TOOL,
@@ -34,6 +34,7 @@ from continuum.constants import (
     PARAM_AGENT_ENABLE_FILE_SEARCH_TOOL,
     PARAM_AGENT_ENABLE_FILE_SEARCH_TOOL_DEFAULT,
 )
+from continuum.utils import is_empty
 from continuum_core.shared.queue_node import QueueNode
 from continuum_interfaces.msg import AgentResponse, AgentRequest, AgentStreamingResponse
 
@@ -75,8 +76,8 @@ class BaseAgentNode(QueueNode, ABC):
             ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
         )
         self.declare_parameter(
-            PARAM_AGENT_INSTRUCTIONS,
-            PARAM_AGENT_INSTRUCTIONS_DEFAULT,
+            PARAM_AGENT_INSTRUCTIONS_PATH,
+            PARAM_AGENT_INSTRUCTIONS_PATH_DEFAULT,
             ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
         )
         self.declare_parameter(
@@ -186,8 +187,21 @@ class BaseAgentNode(QueueNode, ABC):
 
     @property
     def instructions(self) -> str:
-        """Get the instructions parameter."""
-        return self._get_str_param(PARAM_AGENT_INSTRUCTIONS)
+        """Get the instructions by reading from the file path."""
+        try:
+            instructions_path = self._get_str_param(PARAM_AGENT_INSTRUCTIONS_PATH)
+            if is_empty(instructions_path):
+                raise ValueError("No instructions provided to agent.")
+            path = self.storage_path / instructions_path
+            if not path.is_file():
+                raise ValueError(f"Instructions file not found ({path})")
+            with open(path, "r", encoding="utf-8") as f:
+                instructions = f.read().strip()
+            self.get_logger().info(f"Agent instructions loaded from: {path}")
+            return instructions
+        except Exception as e:
+            self.get_logger().warning(f"Error loading instructions (falling back to a simple default): {e}")
+            return "You are a helpful assistant."
 
     @property
     def enable_web_search_tool(self) -> bool:

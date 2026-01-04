@@ -26,13 +26,17 @@ class OpenAiAsrNode(BaseAsrNode):
         base_url = self._get_str_param(PARAM_OPENAI_ASR_BASE_URL)
         options = OpenAiAsrOptions(model_name=model_name, api_key=api_key, base_url=base_url)
 
-        self._executor = OpenAiAsrClient(options=options)
-        self.get_logger().info(f"OpenAI ASR node initialized: {options}")
+        try:
+            self._executor = OpenAiAsrClient(options=options)
+            self.get_logger().info(f"OpenAI ASR node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize OpenAI ASR node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up OpenAI ASR node resources."""
         self.get_logger().info("OpenAI ASR node shutting down.")
-        self._executor.shutdown()
+        if self._executor is not None:
+            self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

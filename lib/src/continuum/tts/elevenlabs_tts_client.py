@@ -1,10 +1,15 @@
 import logging
 import typing
-import wave
 from typing import Callable, Optional
 
 from elevenlabs.client import ElevenLabs, OMIT
 
+from continuum.constants import (
+    DEFAULT_AUDIO_SAMPLE_RATE,
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_AUDIO_SAMPLE_WIDTH,
+    DEFAULT_AUDIO_FORMAT,
+)
 from continuum.tts.models import (
     ContinuumTtsResponse,
     ContinuumTtsRequest,
@@ -12,10 +17,7 @@ from continuum.tts.models import (
     ElevenLabsTtsOptions,
 )
 from continuum.tts.tts_client import ContinuumTtsClient
-from continuum.utils import create_timestamped_filename, none_if_empty
-
-# Target sample rate for output audio files
-TARGET_SAMPLE_RATE = 16000
+from continuum.utils import none_if_empty
 
 
 class ElevenLabsTtsClient(ContinuumTtsClient):
@@ -48,26 +50,20 @@ class ElevenLabsTtsClient(ContinuumTtsClient):
         for chunk in audio:
             audio_chunks.append(chunk)
 
-        # Combine all chunks
+        # Combine all chunks and publish
         audio_data = b"".join(audio_chunks)
-
-        # Write as WAV file
-        # ElevenLabs pcm_16000 format: 16kHz sample rate, 16-bit PCM, mono
-        audio_path = create_timestamped_filename("elevenlabs", "wav")
-        with wave.open(str(audio_path), "wb") as wav_file:
-            wav_file.setnchannels(1)  # Mono
-            wav_file.setsampwidth(2)  # 16-bit = 2 bytes
-            wav_file.setframerate(TARGET_SAMPLE_RATE)
-            wav_file.writeframes(audio_data)
-
-        self._logger.info(f"Generated audio file: {audio_path}")
-        return ContinuumTtsResponse(
+        response = ContinuumTtsResponse(
             session_id=request.session_id,
             is_initial=request.is_initial,
             is_final=request.is_final,
             order_id=request.order_id,
-            audio_path=str(audio_path),
+            format=DEFAULT_AUDIO_FORMAT,
+            channels=DEFAULT_AUDIO_CHANNELS,
+            sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
+            sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,
         )
+        response.set_audio_bytes(audio_data)
+        return response
 
     def shutdown(self) -> None:
         """Shutdown the TTS client and clean up resources."""

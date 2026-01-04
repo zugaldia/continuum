@@ -6,12 +6,7 @@ from rclpy.executors import ExternalShutdownException
 
 from continuum.asr import FasterWhisperAsrClient
 from continuum.asr.models import FasterWhisperAsrOptions
-from continuum.constants import (
-    PARAM_FASTERWHISPER_DEVICE,
-    PARAM_FASTERWHISPER_DEVICE_DEFAULT,
-    PARAM_FASTERWHISPER_DOWNLOAD_ROOT,
-    PARAM_FASTERWHISPER_DOWNLOAD_ROOT_DEFAULT,
-)
+from continuum.constants import PARAM_FASTERWHISPER_DEVICE, PARAM_FASTERWHISPER_DEVICE_DEFAULT
 from continuum_core.asr.base_asr_node import BaseAsrNode
 
 
@@ -23,24 +18,28 @@ class FasterWhisperAsrNode(BaseAsrNode):
         # Read parameters and create options
         model_name = self.model_name
         device = self._get_str_param(PARAM_FASTERWHISPER_DEVICE)
-        download_root = self._get_str_param(PARAM_FASTERWHISPER_DOWNLOAD_ROOT)
+        download_root = str(self.storage_path)
         options = FasterWhisperAsrOptions(
             model_name=model_name,
             device=device,
             download_root=download_root,
         )
 
-        self._executor = FasterWhisperAsrClient(options=options)
-        if self.debug_mode:
-            client = cast(FasterWhisperAsrClient, self._executor)
-            self.get_logger().info(f"Available models: {client.get_available_models()}")
-            self.get_logger().info(f"Supported languages: {client.get_supported_languages()}")
-        self.get_logger().info(f"Faster Whisper ASR node initialized: {options}")
+        try:
+            self._executor = FasterWhisperAsrClient(options=options)
+            if self.debug_mode:
+                client = cast(FasterWhisperAsrClient, self._executor)
+                self.get_logger().info(f"Available models: {client.get_available_models()}")
+                self.get_logger().info(f"Supported languages: {client.get_supported_languages()}")
+            self.get_logger().info(f"Faster Whisper ASR node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize Faster Whisper ASR node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up Faster Whisper ASR node resources."""
         self.get_logger().info("Faster Whisper ASR node shutting down.")
-        self._executor.shutdown()
+        if self._executor is not None:
+            self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:
@@ -49,11 +48,6 @@ class FasterWhisperAsrNode(BaseAsrNode):
         self.declare_parameter(
             PARAM_FASTERWHISPER_DEVICE,
             PARAM_FASTERWHISPER_DEVICE_DEFAULT,
-            ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
-        )
-        self.declare_parameter(
-            PARAM_FASTERWHISPER_DOWNLOAD_ROOT,
-            PARAM_FASTERWHISPER_DOWNLOAD_ROOT_DEFAULT,
             ParameterDescriptor(type=ParameterType.PARAMETER_STRING),
         )
 

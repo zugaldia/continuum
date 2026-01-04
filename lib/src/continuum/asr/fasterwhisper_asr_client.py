@@ -42,9 +42,10 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
         streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
     ) -> ContinuumAsrResponse:
         """Transcribe audio data to text using Faster Whisper."""
+        audio_buffer = self._create_audio_buffer(request)
         segments: Iterable[Segment]
         info: TranscriptionInfo
-        segments, info = self._model.transcribe(audio=request.audio_path, language=none_if_empty(request.language))
+        segments, info = self._model.transcribe(audio=audio_buffer, language=none_if_empty(request.language))
 
         # Process the stream
         outputs: List[Segment] = []

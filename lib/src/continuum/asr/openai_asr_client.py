@@ -32,12 +32,12 @@ class OpenAiAsrClient(ContinuumAsrClient):
         """Transcribe audio data to text using OpenAI."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI_ASR
         language = none_if_empty(request.language) or Omit()
-
         self._logger.info(f"Starting ASR request ({model_name}) for session_id: {request.session_id}")
-        with open(request.audio_path, "rb") as audio_file:
-            events = self._client.audio.transcriptions.create(
-                file=audio_file, model=model_name, stream=True, language=language
-            )
+
+        audio_buffer = self._create_audio_buffer(request)
+        events = self._client.audio.transcriptions.create(
+            file=audio_buffer, model=model_name, stream=True, language=language
+        )
 
         done_event: Optional[TranscriptionTextDoneEvent] = None
         for event in events:

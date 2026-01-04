@@ -26,13 +26,17 @@ class PydanticAgentNode(BaseAgentNode):
             enable_file_search_tool=self.enable_file_search_tool,
         )
 
-        self._executor = PydanticAgentRunner(options=options)
-        self.get_logger().info(f"Pydantic agent node initialized: {options}")
+        try:
+            self._executor = PydanticAgentRunner(options=options)
+            self.get_logger().info(f"Pydantic agent node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize Pydantic agent node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up pydantic agent node resources."""
         self.get_logger().info("Pydantic agent node shutting down.")
-        self._executor.shutdown()
+        if self._executor:
+            self._executor.shutdown()
         super().on_shutdown()
 
 

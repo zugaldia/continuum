@@ -30,13 +30,17 @@ class ElevenLabsTtsNode(BaseTtsNode):
             voice_id=voice_id,
         )
 
-        self._executor = ElevenLabsTtsClient(options=options)
-        self.get_logger().info(f"ElevenLabs TTS node initialized: {options}")
+        try:
+            self._executor = ElevenLabsTtsClient(options=options)
+            self.get_logger().info(f"ElevenLabs TTS node initialized: {options}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to initialize ElevenLabs TTS node: {e}")
 
     def on_shutdown(self) -> None:
         """Clean up ElevenLabs TTS node resources."""
         self.get_logger().info("ElevenLabs TTS node shutting down.")
-        self._executor.shutdown()
+        if self._executor is not None:
+            self._executor.shutdown()
         super().on_shutdown()
 
     def register_parameters(self) -> None:

@@ -95,12 +95,12 @@ class BaseTtsNode(QueueNode, ABC):
     #
 
     def publish_tts_response(self, sdk_response: ContinuumTtsResponse) -> None:
+        response = TtsResponse()
+        set_message_fields(response, sdk_response.model_dump())
         if sdk_response.error_code != ERROR_CODE_SUCCESS:
             self.get_logger().error(f"TTS response error: {sdk_response}")
         else:
-            self.get_logger().info(f"TTS response: {sdk_response}")
-        response = TtsResponse()
-        set_message_fields(response, sdk_response.model_dump())
+            self._log_message_redacted(response)
         self._tts_publisher.publish(response)
 
     def publish_tts_streaming_response(self, sdk_streaming_response: ContinuumTtsStreamingResponse) -> None:

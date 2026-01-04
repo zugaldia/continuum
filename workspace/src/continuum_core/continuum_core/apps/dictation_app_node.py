@@ -145,8 +145,8 @@ class DictationAppNode(BaseAppNode, ContinuumExecutor):
 
     def _listener_callback(self, msg: DictationRequest) -> None:
         """Handle incoming dictation requests."""
+        self._log_message_redacted(msg)
         sdk_request = ContinuumDictationRequest.from_ros(message_to_ordereddict(msg))
-        self.get_logger().info(f"Dictation request received: {sdk_request}")
         self.receive_request(sdk_request)
 
     async def execute_request(
@@ -158,7 +158,15 @@ class DictationAppNode(BaseAppNode, ContinuumExecutor):
         self.add_active_session(request.session_id)
         self._session_state[request.session_id] = SessionState(request=request, start_time=time.time())
         self._asr_publisher.publish(
-            AsrRequest(session_id=request.session_id, audio_path=request.audio_path, language=request.language)
+            AsrRequest(
+                session_id=request.session_id,
+                audio_data=request.audio_data,
+                format=request.format,
+                channels=request.channels,
+                sample_rate=request.sample_rate,
+                sample_width=request.sample_width,
+                language=request.language,
+            )
         )
 
         # Publish (queued) update to consumers
