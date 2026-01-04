@@ -2,7 +2,7 @@
 # For workspace-specific commands, see workspace/Makefile
 # For scripts-specific commands, see scripts/Makefile
 
-.PHONY: install-lib install-models uninstall-lib lint format docker-build docker-up docker-down docker-logs
+.PHONY: install-lib install-models uninstall-lib lint format docker-build docker-rebuild docker-clean docker-up docker-down docker-logs
 
 install-lib:
 	cd lib && pip install --break-system-packages -e .
@@ -25,8 +25,15 @@ format:
 	cd workspace && $(MAKE) format
 	cd scripts && $(MAKE) format
 
+copy-test-audio:
+	mkdir -p ${HOME}/.local/share/continuum/reachy
+	cp assets/audio/jfk.wav ${HOME}/.local/share/continuum/reachy/test.wav
+
 docker-build:
 	docker compose build
+
+docker-rebuild:
+	docker compose build --no-cache
 
 docker-up:
 	docker compose up -d
