@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from continuum.constants import (
@@ -6,6 +8,14 @@ from continuum.constants import (
     DEFAULT_AUDIO_SAMPLE_WIDTH,
 )
 from continuum.utils import generate_order_id
+
+
+class ReachyState(BaseModel):
+    """Tracks the state for Reachy."""
+
+    active_session_id: Optional[str] = None
+    state_id: Optional[str] = None  # Agent memory
+    request_timestamp: Optional[int] = None  # Timestamp from the initial ASR request (nanoseconds)
 
 
 class ReachyAudio(BaseModel):

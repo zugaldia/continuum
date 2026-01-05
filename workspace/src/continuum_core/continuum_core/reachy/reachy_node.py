@@ -2,7 +2,6 @@ from typing import Optional
 
 import rclpy
 import soundfile as sf
-from pydantic import BaseModel
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
 from rclpy.publisher import Publisher
@@ -45,7 +44,7 @@ from continuum.utils import (
     generate_order_id,
     compute_elapsed_ms,
 )
-from continuum_core.reachy.models import ReachyAudio
+from continuum_core.reachy.models import ReachyAudio, ReachyState
 from continuum_core.reachy.reachy_listens import ReachyListens
 from continuum_core.reachy.reachy_moves import ReachyMoves
 from continuum_core.reachy.reachy_sees import ReachySees
@@ -65,14 +64,6 @@ from continuum_interfaces.msg import (
 
 # Connection configuration
 REACHY_CONNECTION_RETRIES = 3
-
-
-class ReachyState(BaseModel):
-    """Tracks the state for Reachy."""
-
-    active_session_id: Optional[str] = None
-    state_id: Optional[str] = None  # Agent memory
-    request_timestamp: Optional[int] = None  # Timestamp from the initial ASR request (nanoseconds)
 
 
 class ReachyNode(AsyncNode):
