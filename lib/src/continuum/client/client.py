@@ -9,6 +9,7 @@ for easier packaging. Similarly, we might need a lightweight integration for a T
 """
 
 import asyncio
+import base64
 import logging
 from typing import Any, Callable, Dict, List, Optional, Protocol, Type, TypeVar
 
@@ -208,6 +209,10 @@ class ContinuumClient:
         """Subscribe to a topic with automatic Pydantic model conversion."""
 
         def wrapped_callback(msg: Dict[str, Any]) -> None:
+            # rosbridge encodes uint8[] as base64 strings (AudioComponent)
+            if "audio_data" in msg and isinstance(msg["audio_data"], str):
+                audio_bytes = base64.b64decode(msg["audio_data"])
+                msg["audio_data"] = list(audio_bytes)
             parsed = model_class.from_ros(msg)
             callback(parsed)
 
