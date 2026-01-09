@@ -23,6 +23,14 @@ from continuum.constants import (
     PATH_INPUT,
     PATH_AGENT,
     NODE_AGENT_PYDANTIC,
+    PATH_VAD,
+    NODE_VAD_SILERO,
+    NODE_VAD_NAIVE,
+    NODE_VAD_PICOVOICE,
+    PATH_MIC,
+    NODE_MIC_PICOVOICE,
+    NODE_MIC_PYAUDIO,
+    NODE_MIC_GSTREAMER,
 )
 
 
@@ -81,6 +89,50 @@ def generate_launch_description():
                 executable="joystick_node",
                 name="joystick",
                 namespace=f"{CONTINUUM_NAMESPACE}/{PATH_INPUT}",
+                parameters=parameters,
+            ),
+            # MIC nodes
+            Node(
+                package="continuum_core",
+                executable="picovoice_mic_node",
+                name="picovoice_mic",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_MIC}/{NODE_MIC_PICOVOICE}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="pyaudio_mic_node",
+                name="pyaudio_mic",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_MIC}/{NODE_MIC_PYAUDIO}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="gstreamer_mic_node",
+                name="gstreamer_mic",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_MIC}/{NODE_MIC_GSTREAMER}",
+                parameters=parameters,
+            ),
+            # VAD nodes
+            Node(
+                package="continuum_core",
+                executable="naive_vad_node",
+                name="naive_vad",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_VAD}/{NODE_VAD_NAIVE}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="silero_vad_node",
+                name="silero_vad",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_VAD}/{NODE_VAD_SILERO}",
+                parameters=parameters,
+            ),
+            Node(
+                package="continuum_core",
+                executable="picovoice_vad_node",
+                name="picovoice_vad",
+                namespace=f"{CONTINUUM_NAMESPACE}/{PATH_VAD}/{NODE_VAD_PICOVOICE}",
                 parameters=parameters,
             ),
             # ASR nodes

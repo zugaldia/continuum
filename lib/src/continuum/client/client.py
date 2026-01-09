@@ -37,7 +37,9 @@ from continuum.constants import (
     PATH_APP,
     PATH_ASR,
     PATH_LLM,
+    PATH_MIC,
     PATH_TTS,
+    PATH_VAD,
     PROFILE_LOCAL,
     TOPIC_AGENT_REQUEST,
     TOPIC_AGENT_RESPONSE,
@@ -54,20 +56,36 @@ from continuum.constants import (
     TOPIC_LLM_REQUEST,
     TOPIC_LLM_RESPONSE,
     TOPIC_LLM_STREAMING_RESPONSE,
+    TOPIC_MIC_REQUEST,
+    TOPIC_MIC_RESPONSE,
+    TOPIC_MIC_STREAMING_RESPONSE,
     TOPIC_TTS_REQUEST,
     TOPIC_TTS_RESPONSE,
     TOPIC_TTS_STREAMING_RESPONSE,
+    TOPIC_VAD_REQUEST,
+    TOPIC_VAD_RESPONSE,
+    TOPIC_VAD_STREAMING_RESPONSE,
 )
 from continuum.llm.models import (
     ContinuumLlmRequest,
     ContinuumLlmResponse,
     ContinuumLlmStreamingResponse,
 )
+from continuum.mic.models import (
+    ContinuumMicRequest,
+    ContinuumMicResponse,
+    ContinuumMicStreamingResponse,
+)
 from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import (
     ContinuumTtsRequest,
     ContinuumTtsResponse,
     ContinuumTtsStreamingResponse,
+)
+from continuum.vad.models import (
+    ContinuumVadRequest,
+    ContinuumVadResponse,
+    ContinuumVadStreamingResponse,
 )
 
 
@@ -230,19 +248,33 @@ class ContinuumClient:
         message_type = "continuum_interfaces/EchoResponse"
         self._subscribe_topic_typed(name, message_type, callback, EchoResponse)
 
-    def subscribe_agent_response(self, node_name: str, callback: Callable[[ContinuumAgentResponse], None]) -> None:
-        """Subscribe to the agent response topic for the specified agent node."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_RESPONSE}"
-        message_type = "continuum_interfaces/AgentResponse"
-        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentResponse)
+    def subscribe_mic_response(self, node_name: str, callback: Callable[[ContinuumMicResponse], None]) -> None:
+        """Subscribe to the microphone response topic for the specified mic node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_MIC}/{node_name}/{TOPIC_MIC_RESPONSE}"
+        message_type = "continuum_interfaces/MicResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumMicResponse)
 
-    def subscribe_agent_streaming_response(
-        self, node_name: str, callback: Callable[[ContinuumAgentStreamingResponse], None]
+    def subscribe_mic_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumMicStreamingResponse], None]
     ) -> None:
-        """Subscribe to the agent streaming response topic for the specified agent node."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_STREAMING_RESPONSE}"
-        message_type = "continuum_interfaces/AgentStreamingResponse"
-        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentStreamingResponse)
+        """Subscribe to the microphone streaming response topic for the specified mic node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_MIC}/{node_name}/{TOPIC_MIC_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/MicStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumMicStreamingResponse)
+
+    def subscribe_vad_response(self, node_name: str, callback: Callable[[ContinuumVadResponse], None]) -> None:
+        """Subscribe to the VAD response topic for the specified VAD node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{node_name}/{TOPIC_VAD_RESPONSE}"
+        message_type = "continuum_interfaces/VadResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumVadResponse)
+
+    def subscribe_vad_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumVadStreamingResponse], None]
+    ) -> None:
+        """Subscribe to the VAD streaming response topic for the specified VAD node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{node_name}/{TOPIC_VAD_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/VadStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumVadStreamingResponse)
 
     def subscribe_asr_response(self, node_name: str, callback: Callable[[ContinuumAsrResponse], None]) -> None:
         """Subscribe to the ASR response topic for the specified ASR node."""
@@ -272,6 +304,34 @@ class ContinuumClient:
         message_type = "continuum_interfaces/LlmStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumLlmStreamingResponse)
 
+    def subscribe_tts_response(self, node_name: str, callback: Callable[[ContinuumTtsResponse], None]) -> None:
+        """Subscribe to the TTS response topic for the specified TTS node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_RESPONSE}"
+        message_type = "continuum_interfaces/TtsResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsResponse)
+
+    def subscribe_tts_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumTtsStreamingResponse], None]
+    ) -> None:
+        """Subscribe to the TTS streaming response topic for the specified TTS node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/TtsStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsStreamingResponse)
+
+    def subscribe_agent_response(self, node_name: str, callback: Callable[[ContinuumAgentResponse], None]) -> None:
+        """Subscribe to the agent response topic for the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_RESPONSE}"
+        message_type = "continuum_interfaces/AgentResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentResponse)
+
+    def subscribe_agent_streaming_response(
+        self, node_name: str, callback: Callable[[ContinuumAgentStreamingResponse], None]
+    ) -> None:
+        """Subscribe to the agent streaming response topic for the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_STREAMING_RESPONSE}"
+        message_type = "continuum_interfaces/AgentStreamingResponse"
+        self._subscribe_topic_typed(name, message_type, callback, ContinuumAgentStreamingResponse)
+
     def subscribe_dictation_response(
         self, callback: Callable[[ContinuumDictationResponse], None], profile: str = PROFILE_LOCAL
     ) -> None:
@@ -287,20 +347,6 @@ class ContinuumClient:
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_STREAMING_RESPONSE}"
         message_type = "continuum_interfaces/DictationStreamingResponse"
         self._subscribe_topic_typed(name, message_type, callback, ContinuumDictationStreamingResponse)
-
-    def subscribe_tts_response(self, node_name: str, callback: Callable[[ContinuumTtsResponse], None]) -> None:
-        """Subscribe to the TTS response topic for the specified TTS node."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_RESPONSE}"
-        message_type = "continuum_interfaces/TtsResponse"
-        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsResponse)
-
-    def subscribe_tts_streaming_response(
-        self, node_name: str, callback: Callable[[ContinuumTtsStreamingResponse], None]
-    ) -> None:
-        """Subscribe to the TTS streaming response topic for the specified TTS node."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_STREAMING_RESPONSE}"
-        message_type = "continuum_interfaces/TtsStreamingResponse"
-        self._subscribe_topic_typed(name, message_type, callback, ContinuumTtsStreamingResponse)
 
     #
     # Publishers
@@ -327,10 +373,18 @@ class ContinuumClient:
         self._publish_message(name, message_type, message)
         return None
 
-    def publish_agent_request(self, node_name: str, request: ContinuumAgentRequest) -> None:
-        """Publish an agent request to the specified agent node."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_REQUEST}"
-        message_type = "continuum_interfaces/AgentRequest"
+    def publish_mic_request(self, node_name: str, request: ContinuumMicRequest) -> None:
+        """Publish a microphone request to the specified mic node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_MIC}/{node_name}/{TOPIC_MIC_REQUEST}"
+        message_type = "continuum_interfaces/MicRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
+        return None
+
+    def publish_vad_request(self, node_name: str, request: ContinuumVadRequest) -> None:
+        """Publish a VAD request to the specified VAD node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{node_name}/{TOPIC_VAD_REQUEST}"
+        message_type = "continuum_interfaces/VadRequest"
         message = roslibpy.Message(request.model_dump())
         self._publish_message(name, message_type, message)
         return None
@@ -351,18 +405,26 @@ class ContinuumClient:
         self._publish_message(name, message_type, message)
         return None
 
-    def publish_dictation_request(self, request: ContinuumDictationRequest, profile: str = PROFILE_LOCAL) -> None:
-        """Publish a dictation request to the dictation app for the specified profile."""
-        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_REQUEST}"
-        message_type = "continuum_interfaces/DictationRequest"
-        message = roslibpy.Message(request.model_dump())
-        self._publish_message(name, message_type, message)
-        return None
-
     def publish_tts_request(self, node_name: str, request: ContinuumTtsRequest) -> None:
         """Publish a TTS request to the specified TTS node."""
         name = f"/{CONTINUUM_NAMESPACE}/{PATH_TTS}/{node_name}/{TOPIC_TTS_REQUEST}"
         message_type = "continuum_interfaces/TtsRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
+        return None
+
+    def publish_agent_request(self, node_name: str, request: ContinuumAgentRequest) -> None:
+        """Publish an agent request to the specified agent node."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_AGENT}/{node_name}/{TOPIC_AGENT_REQUEST}"
+        message_type = "continuum_interfaces/AgentRequest"
+        message = roslibpy.Message(request.model_dump())
+        self._publish_message(name, message_type, message)
+        return None
+
+    def publish_dictation_request(self, request: ContinuumDictationRequest, profile: str = PROFILE_LOCAL) -> None:
+        """Publish a dictation request to the dictation app for the specified profile."""
+        name = f"/{CONTINUUM_NAMESPACE}/{PATH_APP}/{NODE_APP_DICTATION}/{profile}/{TOPIC_DICTATION_REQUEST}"
+        message_type = "continuum_interfaces/DictationRequest"
         message = roslibpy.Message(request.model_dump())
         self._publish_message(name, message_type, message)
         return None

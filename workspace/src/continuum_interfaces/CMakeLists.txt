@@ -12,6 +12,16 @@ find_package(std_msgs REQUIRED)
 
 # Generate interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/EchoRequest.msg"
+  "msg/EchoResponse.msg"
+  "msg/JoystickButtonEvent.msg"
+  "msg/JoystickAxisEvent.msg"
+  "msg/MicRequest.msg"
+  "msg/MicResponse.msg"
+  "msg/MicStreamingResponse.msg"
+  "msg/VadRequest.msg"
+  "msg/VadResponse.msg"
+  "msg/VadStreamingResponse.msg"
   "msg/AsrRequest.msg"
   "msg/AsrResponse.msg"
   "msg/AsrStreamingResponse.msg"
@@ -21,16 +31,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TtsRequest.msg"
   "msg/TtsResponse.msg"
   "msg/TtsStreamingResponse.msg"
-  "msg/DictationRequest.msg"
-  "msg/DictationResponse.msg"
-  "msg/DictationStreamingResponse.msg"
   "msg/AgentRequest.msg"
   "msg/AgentResponse.msg"
   "msg/AgentStreamingResponse.msg"
-  "msg/EchoRequest.msg"
-  "msg/EchoResponse.msg"
-  "msg/JoystickButtonEvent.msg"
-  "msg/JoystickAxisEvent.msg"
+  "msg/DictationRequest.msg"
+  "msg/DictationResponse.msg"
+  "msg/DictationStreamingResponse.msg"
   DEPENDENCIES std_msgs
 )
 

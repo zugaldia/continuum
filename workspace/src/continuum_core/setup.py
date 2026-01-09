@@ -48,6 +48,14 @@ setup(
             "dictation_app_node = continuum_core.apps.dictation_app_node:main",
             # Agent nodes
             "pydantic_agent_node = continuum_core.agent.pydantic_agent_node:main",
+            # VAD nodes
+            "naive_vad_node = continuum_core.vad.naive_vad_node:main",
+            "silero_vad_node = continuum_core.vad.silero_vad_node:main",
+            "picovoice_vad_node = continuum_core.vad.picovoice_vad_node:main",
+            # MIC nodes
+            "picovoice_mic_node = continuum_core.mic.picovoice_mic_node:main",
+            "pyaudio_mic_node = continuum_core.mic.pyaudio_mic_node:main",
+            "gstreamer_mic_node = continuum_core.mic.gstreamer_mic_node:main",
             # Reachy
             "reachy_node = continuum_core.reachy.reachy_node:main",
         ],
