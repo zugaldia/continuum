@@ -79,9 +79,7 @@ class BaseLlmNode(QueueNode, ABC):
         finally:
             self.manage_queue(sdk_request)
 
-    def handle_streaming_result(
-        self, streaming_response: ContinuumLlmStreamingResponse, sdk_request: ContinuumLlmRequest
-    ) -> None:
+    def handle_streaming_result(self, streaming_response: ContinuumLlmStreamingResponse) -> None:
         """Handle a streaming result from an LLM request."""
         self.publish_llm_streaming_response(streaming_response)
 

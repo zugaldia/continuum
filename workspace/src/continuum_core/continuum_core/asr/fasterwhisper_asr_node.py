@@ -26,7 +26,7 @@ class FasterWhisperAsrNode(BaseAsrNode):
         )
 
         try:
-            self._executor = FasterWhisperAsrClient(options=options)
+            self._executor = FasterWhisperAsrClient(options=options, streaming_callback=self.handle_streaming_result)
             if self.debug_mode:
                 client = cast(FasterWhisperAsrClient, self._executor)
                 self.get_logger().info(f"Available models: {client.get_available_models()}")

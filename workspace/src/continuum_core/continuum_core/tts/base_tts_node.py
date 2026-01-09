@@ -84,9 +84,7 @@ class BaseTtsNode(QueueNode, ABC):
         finally:
             self.manage_queue(sdk_request)
 
-    def handle_streaming_result(
-        self, streaming_response: ContinuumTtsStreamingResponse, sdk_request: ContinuumTtsRequest
-    ) -> None:
+    def handle_streaming_result(self, streaming_response: ContinuumTtsStreamingResponse) -> None:
         """Handle a streaming result from a TTS request."""
         self.publish_tts_streaming_response(streaming_response)
 

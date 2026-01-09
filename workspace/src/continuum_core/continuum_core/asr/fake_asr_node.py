@@ -28,7 +28,7 @@ class FakeAsrNode(BaseAsrNode):
         options = FakeAsrOptions(model_name=model_name)
 
         try:
-            self._executor = FakeAsrClient(options=options)
+            self._executor = FakeAsrClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"Fake ASR node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize Fake ASR node: {e}")

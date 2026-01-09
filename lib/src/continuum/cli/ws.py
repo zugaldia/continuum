@@ -14,20 +14,30 @@ from continuum.apps.models import (
     ContinuumDictationStreamingResponse,
 )
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrResponse, ContinuumAsrStreamingResponse
+from continuum.audio import AUDIO_FORMAT_PCM
 from continuum.client import ContinuumClient
 from continuum.constants import (
     ERROR_CODE_SUCCESS,
     NODE_AGENT_PYDANTIC,
     NODE_ASR_FASTERWHISPER,
     NODE_LLM_OLLAMA,
+    NODE_MIC_PICOVOICE,
     NODE_TTS_KOKORO,
+    NODE_VAD_SILERO,
     PROFILE_LOCAL,
-    DEFAULT_AUDIO_FORMAT,
 )
 from continuum.llm.models import ContinuumLlmRequest, ContinuumLlmResponse, ContinuumLlmStreamingResponse
+from continuum.mic.models import (
+    ContinuumMicRequest,
+    ContinuumMicResponse,
+    ContinuumMicStreamingResponse,
+    MicAction,
+)
 from continuum.models import EchoRequest, EchoResponse
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsResponse, ContinuumTtsStreamingResponse
-from continuum.utils import generate_unique_id, is_empty, create_timestamped_filename, save_wav_file, load_wav_file
+from continuum.audio import AudioIO
+from continuum.utils import generate_unique_id, is_empty
+from continuum.vad.models import ContinuumVadRequest, ContinuumVadResponse, ContinuumVadStreamingResponse
 
 app = typer.Typer()
 
@@ -102,6 +112,80 @@ def echo_command(
     run_async_command(run_echo)
 
 
+@app.command(name="mic")
+def mic_command(
+    node_name: str = typer.Option(NODE_MIC_PICOVOICE, help="Microphone node name"),
+    duration: int = typer.Option(10, help="Recording duration in seconds"),
+) -> None:
+    """Start microphone recording, wait, then stop and save the audio."""
+    session_id = generate_unique_id()
+    typer.echo(f"Starting microphone recording on {node_name}")
+    typer.echo(f"Session ID: {session_id}")
+    typer.echo(f"Duration: {duration} seconds")
+
+    async def run_mic():
+        response_received, set_response_received = create_response_waiter()
+        streaming_chunks = []
+        final_audio_data = None
+
+        def on_mic_streaming_response(streaming_response: ContinuumMicStreamingResponse) -> None:
+            typer.echo(f"Streaming chunk: {len(streaming_response.audio_data)} bytes")
+            streaming_chunks.append(streaming_response)
+
+        def on_mic_response(response: ContinuumMicResponse) -> None:
+            nonlocal final_audio_data
+            typer.echo(f"Mic response: state={response.state}")
+            typer.echo(f"Error code: {response.error_code}")
+            typer.echo(f"Error message: {response.error_message}")
+
+            if response.audio_data:
+                final_audio_data = response
+                typer.echo(f"Final audio data: {len(response.audio_data)} bytes")
+
+            set_response_received()
+
+        try:
+            async with continuum_client_connection() as client:
+                # Subscribe to responses
+                client.subscribe_mic_streaming_response(node_name, on_mic_streaming_response)
+                client.subscribe_mic_response(node_name, on_mic_response)
+
+                # Send START request
+                start_request = ContinuumMicRequest(session_id=session_id, action=MicAction.START)
+                client.publish_mic_request(node_name, start_request)
+                typer.echo("Sent START request, waiting for response...")
+                await asyncio.wait_for(response_received.wait(), timeout=5.0)
+
+                # Wait for the recording duration
+                typer.echo(f"Recording for {duration} seconds...")
+                await asyncio.sleep(duration)
+
+                # Send STOP request
+                response_received.clear()
+                stop_request = ContinuumMicRequest(session_id=session_id, action=MicAction.STOP)
+                client.publish_mic_request(node_name, stop_request)
+                typer.echo("Sent STOP request, waiting for final audio...")
+                await asyncio.wait_for(response_received.wait(), timeout=5.0)
+
+                # Save the audio data
+                if final_audio_data and final_audio_data.audio_data:
+                    audio_path = AudioIO.save_tmp_wav_file(
+                        audio_data=final_audio_data.get_audio_bytes(),
+                        sample_rate=final_audio_data.sample_rate,
+                        channels=final_audio_data.channels,
+                        sample_width=final_audio_data.sample_width,
+                    )
+                    typer.echo(f"Audio saved to: {audio_path}")
+                    typer.echo(f"Total streaming chunks received: {len(streaming_chunks)}")
+                else:
+                    typer.echo("No audio data received")
+        except Exception as e:
+            typer.echo(f"Error during mic request: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    run_async_command(run_mic)
+
+
 @app.command(name="asr")
 def asr_command(
     audio_file: str = typer.Argument(..., help="Path to the audio file"),
@@ -137,13 +221,13 @@ def asr_command(
 
         try:
             # Load audio file and populate audio_data
-            audio_data, sample_rate, channels, sample_width = load_wav_file(audio_path)
+            audio_data, sample_rate, channels, sample_width = AudioIO.load_wav_file(audio_path)
             request = ContinuumAsrRequest(session_id=session_id, language=language)
             request.set_audio_bytes(audio_data)
             request.sample_rate = sample_rate
             request.channels = channels
             request.sample_width = sample_width
-            request.format = DEFAULT_AUDIO_FORMAT
+            request.format = AUDIO_FORMAT_PCM
 
             async with continuum_client_connection() as client:
                 client.subscribe_asr_streaming_response(node_name, on_asr_streaming_response)
@@ -194,10 +278,8 @@ def tts_command(
 
                 # Save audio data to file
                 if received_response and received_response.audio_data:
-                    audio_path = create_timestamped_filename(node_name, "wav")
-                    save_wav_file(
+                    audio_path = AudioIO.save_tmp_wav_file(
                         audio_data=received_response.get_audio_bytes(),
-                        output_path=audio_path,
                         sample_rate=received_response.sample_rate,
                         channels=received_response.channels,
                         sample_width=received_response.sample_width,
@@ -340,13 +422,13 @@ def dictation_command(
 
         try:
             # Load audio file and populate audio_data
-            audio_data, sample_rate, channels, sample_width = load_wav_file(audio_path)
+            audio_data, sample_rate, channels, sample_width = AudioIO.load_wav_file(audio_path)
             request = ContinuumDictationRequest(session_id=session_id, language=language)
             request.set_audio_bytes(audio_data)
             request.sample_rate = sample_rate
             request.channels = channels
             request.sample_width = sample_width
-            request.format = DEFAULT_AUDIO_FORMAT
+            request.format = AUDIO_FORMAT_PCM
 
             async with continuum_client_connection() as client:
                 client.subscribe_dictation_streaming_response(on_dictation_streaming_response, profile)
@@ -359,6 +441,95 @@ def dictation_command(
             raise typer.Exit(code=1)
 
     run_async_command(run_dictation)
+
+
+@app.command(name="vad")
+def vad_command(
+    mic_node: str = typer.Option(NODE_MIC_PICOVOICE, help="Microphone node name"),
+    vad_node: str = typer.Option(NODE_VAD_SILERO, help="VAD node name"),
+    duration: int = typer.Option(10, help="Recording duration in seconds"),
+) -> None:
+    """Record from microphone and perform real-time voice activity detection."""
+    mic_session_id = generate_unique_id()
+    vad_session_id = generate_unique_id()  # Generate VAD session ID once
+    typer.echo(f"Starting real-time VAD with mic={mic_node}, vad={vad_node}")
+    typer.echo(f"Mic session ID: {mic_session_id}")
+    typer.echo(f"VAD session ID: {vad_session_id}")
+    typer.echo(f"Duration: {duration} seconds")
+
+    async def run_vad():
+        response_received, set_response_received = create_response_waiter()
+        chunk_count = 0
+        vad_event_count = 0
+        ws_client = None
+
+        def on_vad_streaming_response(streaming_response: ContinuumVadStreamingResponse) -> None:
+            nonlocal vad_event_count
+            vad_event_count += 1
+            typer.echo(f"[VAD Event {vad_event_count}] {streaming_response}")
+
+        def on_vad_response(response: ContinuumVadResponse) -> None:
+            if response.error_code != ERROR_CODE_SUCCESS:
+                typer.echo(f"VAD error: {response.error_message}", err=True)
+
+        def on_mic_streaming_response(streaming_response: ContinuumMicStreamingResponse) -> None:
+            nonlocal chunk_count
+            chunk_count += 1
+
+            # Create a VAD request from the microphone chunk
+            # Use the same vad_session_id for all chunks in this recording session
+            vad_request = ContinuumVadRequest(session_id=vad_session_id)
+            vad_request.audio_data = streaming_response.audio_data
+            vad_request.format = streaming_response.format
+            vad_request.sample_rate = streaming_response.sample_rate
+            vad_request.channels = streaming_response.channels
+            vad_request.sample_width = streaming_response.sample_width
+
+            # Publish VAD request for this chunk
+            if ws_client:
+                ws_client.publish_vad_request(vad_node, vad_request)
+
+        def on_mic_response(response: ContinuumMicResponse) -> None:
+            typer.echo(f"Mic response: state={response.state}")
+            if response.error_code != ERROR_CODE_SUCCESS:
+                typer.echo(f"Mic error: {response.error_message}", err=True)
+            set_response_received()
+
+        try:
+            async with continuum_client_connection() as client:
+                ws_client = client
+                # Subscribe to VAD responses
+                client.subscribe_vad_streaming_response(vad_node, on_vad_streaming_response)
+                client.subscribe_vad_response(vad_node, on_vad_response)
+
+                # Subscribe to mic responses
+                client.subscribe_mic_streaming_response(mic_node, on_mic_streaming_response)
+                client.subscribe_mic_response(mic_node, on_mic_response)
+
+                # Start microphone recording
+                start_request = ContinuumMicRequest(session_id=mic_session_id, action=MicAction.START)
+                client.publish_mic_request(mic_node, start_request)
+                typer.echo("Sent START request, waiting for response...")
+                await asyncio.wait_for(response_received.wait(), timeout=5.0)
+
+                # Wait for the recording duration
+                typer.echo(f"Recording and analyzing for {duration} seconds...")
+                await asyncio.sleep(duration)
+
+                # Stop microphone recording
+                response_received.clear()
+                stop_request = ContinuumMicRequest(session_id=mic_session_id, action=MicAction.STOP)
+                client.publish_mic_request(mic_node, stop_request)
+                typer.echo("Sent STOP request, waiting for response...")
+                await asyncio.wait_for(response_received.wait(), timeout=5.0)
+
+                typer.echo(f"\nProcessed {chunk_count} audio chunks")
+                typer.echo(f"Detected {vad_event_count} VAD events")
+        except Exception as e:
+            typer.echo(f"Error during VAD request: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    run_async_command(run_vad)
 
 
 if __name__ == "__main__":

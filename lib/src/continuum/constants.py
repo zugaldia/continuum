@@ -16,12 +16,8 @@ PATH_LLM = "llm"
 PATH_APP = "app"
 PATH_AGENT = "agent"
 PATH_HARDWARE = "hardware"
-
-# Audio constants
-DEFAULT_AUDIO_FORMAT = "pcm"
-DEFAULT_AUDIO_CHANNELS = 1
-DEFAULT_AUDIO_SAMPLE_RATE = 16000
-DEFAULT_AUDIO_SAMPLE_WIDTH = 2
+PATH_MIC = "mic"
+PATH_VAD = "vad"
 
 # Profile names
 PROFILE_LOCAL = "local"
@@ -41,6 +37,12 @@ NODE_LLM_MAPGPT = "mapgpt"
 NODE_APP_DICTATION = "dictation"
 NODE_AGENT_PYDANTIC = "pydantic"
 NODE_REACHY = "reachy"
+NODE_VAD_SILERO = "silero"
+NODE_VAD_PICOVOICE = "picovoice"
+NODE_VAD_NAIVE = "naive"
+NODE_MIC_PICOVOICE = "picovoice"
+NODE_MIC_PYAUDIO = "pyaudio"
+NODE_MIC_GSTREAMER = "gstreamer"
 
 # Topic names
 TOPIC_ECHO_REQUEST = "echo_request"
@@ -48,6 +50,9 @@ TOPIC_ECHO_RESPONSE = "echo_response"
 TOPIC_HEARTBEAT = "heartbeat"
 TOPIC_JOYSTICK_BUTTON_EVENT = "joystick_button_event"
 TOPIC_JOYSTICK_AXIS_EVENT = "joystick_axis_event"
+TOPIC_MIC_REQUEST = "mic_request"
+TOPIC_MIC_RESPONSE = "mic_response"
+TOPIC_MIC_STREAMING_RESPONSE = "mic_streaming_response"
 TOPIC_ASR_REQUEST = "asr_request"
 TOPIC_ASR_RESPONSE = "asr_response"
 TOPIC_ASR_STREAMING_RESPONSE = "asr_streaming_response"
@@ -63,6 +68,9 @@ TOPIC_DICTATION_STREAMING_RESPONSE = "dictation_streaming_response"
 TOPIC_AGENT_REQUEST = "agent_request"
 TOPIC_AGENT_RESPONSE = "agent_response"
 TOPIC_AGENT_STREAMING_RESPONSE = "agent_streaming_response"
+TOPIC_VAD_REQUEST = "vad_request"
+TOPIC_VAD_RESPONSE = "vad_response"
+TOPIC_VAD_STREAMING_RESPONSE = "vad_streaming_response"
 
 # Common parameters
 PARAM_DEBUG_MODE = "debug_mode"
@@ -169,6 +177,26 @@ PARAM_AGENT_NODE = "agent_node"
 PARAM_AGENT_NODE_DEFAULT = NODE_AGENT_PYDANTIC
 PARAM_TTS_NODE = "tts_node"
 PARAM_TTS_NODE_DEFAULT = NODE_TTS_KOKORO
+PARAM_MIC_NODE = "mic_node"
+PARAM_MIC_NODE_DEFAULT = NODE_MIC_GSTREAMER
+PARAM_VAD_NODE = "vad_node"
+PARAM_VAD_NODE_DEFAULT = NODE_VAD_SILERO
+PARAM_ENABLE_VAD = "enable_vad"
+PARAM_ENABLE_VAD_DEFAULT = False
+
+# Naive VAD parameters
+PARAM_NAIVE_RMS_THRESHOLD = "rms_threshold"
+PARAM_NAIVE_RMS_THRESHOLD_DEFAULT = 0.1
+
+# Picovoice VAD parameters
+PARAM_PICOVOICE_API_KEY = "api_key"
+PARAM_PICOVOICE_API_KEY_DEFAULT = ""
+PARAM_PICOVOICE_DEVICE = "device"
+PARAM_PICOVOICE_DEVICE_DEFAULT = ""
+PARAM_PICOVOICE_LIBRARY_PATH = "library_path"
+PARAM_PICOVOICE_LIBRARY_PATH_DEFAULT = ""
+PARAM_PICOVOICE_PROBABILITY_THRESHOLD = "probability_threshold"
+PARAM_PICOVOICE_PROBABILITY_THRESHOLD_DEFAULT = 0.8
 
 # QoS settings
 QOS_DEPTH_DEFAULT = 10

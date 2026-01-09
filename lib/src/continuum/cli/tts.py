@@ -4,6 +4,7 @@ import asyncio
 
 import typer
 
+from continuum.audio import AudioIO
 from continuum.constants import (
     NODE_TTS_KOKORO,
     NODE_TTS_ELEVENLABS,
@@ -12,7 +13,6 @@ from continuum.constants import (
 )
 from continuum.tts import ContinuumTtsClient, KokoroTtsClient, ElevenLabsTtsClient
 from continuum.tts.models import ContinuumTtsRequest, ContinuumTtsStreamingResponse, ElevenLabsTtsOptions
-from continuum.utils import create_timestamped_filename, save_wav_file
 
 
 def tts_command(
@@ -26,9 +26,13 @@ def tts_command(
     """Synthesize text to speech using TTS."""
     typer.echo(f"Synthesizing text using {provider} provider...")
 
+    def streaming_callback(streaming_response: ContinuumTtsStreamingResponse) -> None:
+        """Callback to display streaming responses."""
+        typer.echo(f"Received audio chunk: {len(streaming_response.audio_chunk)} bytes")
+
     client: ContinuumTtsClient
     if provider == NODE_TTS_KOKORO:
-        client = KokoroTtsClient()
+        client = KokoroTtsClient(streaming_callback=streaming_callback)
     elif provider == NODE_TTS_ELEVENLABS:
         if not api_key:
             typer.echo("Error: --api-key is required for ElevenLabs provider", err=True)
@@ -38,28 +42,22 @@ def tts_command(
             voice_id=voice_id,
             model_name=model_name,
         )
-        client = ElevenLabsTtsClient(options=options)
+        client = ElevenLabsTtsClient(options=options, streaming_callback=streaming_callback)
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
     request = ContinuumTtsRequest(text=text, language=language)
 
-    def streaming_callback(streaming_response: ContinuumTtsStreamingResponse) -> None:
-        """Callback to display streaming responses."""
-        typer.echo(f"Received audio chunk: {len(streaming_response.audio_chunk)} bytes")
-
     try:
-        response = asyncio.run(client.execute_request(request, streaming_callback=streaming_callback))
+        response = asyncio.run(client.execute_request(request))
         if response.error_code != 0:
             typer.echo(f"Error during synthesis: {response.error_message}", err=True)
             raise typer.Exit(code=1)
 
         # Save audio data to file
-        audio_path = create_timestamped_filename(provider, "wav")
-        save_wav_file(
+        audio_path = AudioIO.save_tmp_wav_file(
             audio_data=response.get_audio_bytes(),
-            output_path=audio_path,
             sample_rate=response.sample_rate,
             channels=response.channels,
             sample_width=response.sample_width,

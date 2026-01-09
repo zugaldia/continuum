@@ -14,19 +14,21 @@ in the ASR models.
 
 """
 
+import io
+import wave
 from abc import abstractmethod, ABC
 from enum import Enum
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from continuum.constants import (
-    ERROR_CODE_SUCCESS,
+from continuum.audio import (
     DEFAULT_AUDIO_FORMAT,
     DEFAULT_AUDIO_CHANNELS,
     DEFAULT_AUDIO_SAMPLE_RATE,
     DEFAULT_AUDIO_SAMPLE_WIDTH,
 )
+from continuum.constants import ERROR_CODE_SUCCESS, CONTINUUM_ID
 from continuum.utils import generate_unique_id, generate_order_id, generate_timestamp
 
 
@@ -74,12 +76,11 @@ class ContinuumStreamingResponse(BaseModel):
 
 
 class ContinuumExecutor(ABC):
+    def __init__(self, streaming_callback: Optional[Callable[[ContinuumStreamingResponse], None]] = None):
+        self.streaming_callback = streaming_callback
+
     @abstractmethod
-    async def execute_request(
-        self,
-        request: ContinuumRequest,
-        streaming_callback: Optional[Callable[[ContinuumStreamingResponse], None]] = None,
-    ) -> ContinuumResponse:
+    async def execute_request(self, request: ContinuumRequest) -> ContinuumResponse:
         pass
 
     def shutdown(self):
@@ -103,6 +104,24 @@ class AudioComponent(BaseModel):
 
     def set_audio_bytes(self, audio_bytes: bytes) -> None:
         self.audio_data = list(audio_bytes)
+
+    def create_audio_buffer(self) -> io.BytesIO:
+        """Create an audio buffer from this component with proper WAV formatting."""
+        if not self.audio_data:
+            raise ValueError("Audio data must be provided to create an audio buffer.")
+
+        # Create a BytesIO buffer and write a proper WAV file to it
+        audio_buffer = io.BytesIO()
+        audio_buffer.name = f"{CONTINUUM_ID}.wav"  # Add name attribute - required by some APIs (e.g., OpenAI)
+        with wave.open(audio_buffer, "wb") as wav_file:
+            wav_file.setnchannels(self.channels)
+            wav_file.setsampwidth(self.sample_width)
+            wav_file.setframerate(self.sample_rate)
+            wav_file.writeframes(self.get_audio_bytes())
+
+        # Reset buffer position to the beginning for reading
+        audio_buffer.seek(0)
+        return audio_buffer
 
 
 #

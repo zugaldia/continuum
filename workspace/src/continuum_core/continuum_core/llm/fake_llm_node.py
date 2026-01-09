@@ -24,7 +24,7 @@ class FakeLlmNode(BaseLlmNode):
         options = FakeLlmOptions(model_name=model_name)
 
         try:
-            self._executor = FakeLlmClient(options=options)
+            self._executor = FakeLlmClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"Fake LLM node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize Fake LLM node: {e}")

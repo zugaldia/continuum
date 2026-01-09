@@ -136,9 +136,7 @@ class BaseAgentNode(QueueNode, ABC):
         finally:
             self.manage_queue(sdk_request)
 
-    def handle_streaming_result(
-        self, streaming_response: ContinuumAgentStreamingResponse, sdk_request: ContinuumAgentRequest
-    ) -> None:
+    def handle_streaming_result(self, streaming_response: ContinuumAgentStreamingResponse) -> None:
         """Handle a streaming result from an agent request."""
         self.publish_agent_streaming_response(streaming_response)
 

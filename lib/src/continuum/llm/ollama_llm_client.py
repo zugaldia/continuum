@@ -17,8 +17,13 @@ from continuum.utils import none_if_empty, generate_unique_id
 class OllamaLlmClient(ContinuumLlmClient):
     """Ollama LLM client for testing purposes."""
 
-    def __init__(self, options: OllamaLlmOptions = OllamaLlmOptions()) -> None:
+    def __init__(
+        self,
+        options: OllamaLlmOptions = OllamaLlmOptions(),
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the fake LLM client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
         self._client = AsyncClient(host=options.host)
@@ -27,7 +32,6 @@ class OllamaLlmClient(ContinuumLlmClient):
     async def execute_request(
         self,
         request: ContinuumLlmRequest,
-        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OLLAMA
@@ -43,8 +47,8 @@ class OllamaLlmClient(ContinuumLlmClient):
             outputs.append(result)
             if result.done:
                 self._logger.info(f"LLM is done: {result}")
-            elif streaming_callback:
-                streaming_callback(
+            elif self.streaming_callback:
+                self.streaming_callback(
                     ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=result.message.content)
                 )
 

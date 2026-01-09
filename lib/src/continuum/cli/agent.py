@@ -28,23 +28,21 @@ def agent_command(
     typer.echo(f"Sending message to {provider} agent provider...")
     typer.echo(f"State ID: {state_id}")
 
+    def streaming_callback(streaming_response: ContinuumAgentStreamingResponse) -> None:
+        """Callback to display streaming responses."""
+        typer.echo(f"Streaming: {streaming_response}")
+
     if provider == NODE_AGENT_PYDANTIC:
         options = PydanticAgentOptions()
-        client = PydanticAgentRunner(options=options)
+        client = PydanticAgentRunner(options=options, streaming_callback=streaming_callback)
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
     request = ContinuumAgentRequest(content_text=message, state_id=state_id)
 
-    def streaming_callback(streaming_response: ContinuumAgentStreamingResponse) -> None:
-        """Callback to display streaming responses."""
-        typer.echo(f"Streaming: {streaming_response}")
-
     try:
-        response: ContinuumAgentResponse = asyncio.run(
-            client.execute_request(request, streaming_callback=streaming_callback)
-        )
+        response: ContinuumAgentResponse = asyncio.run(client.execute_request(request))
         typer.echo(f"\nFinal response: {response}")
         typer.echo(f"Error code: {response.error_code}")
         typer.echo(f"Error message: {response.error_message}")

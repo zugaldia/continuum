@@ -2,8 +2,8 @@
 name = "continuum"
 version = "0.1.0"
 description = "Continuum Python SDK"
-authors = [{name = "Antonio Zugaldia"}]
-license = {text = "MIT"}
+authors = [{ name = "Antonio Zugaldia" }]
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12"
 
@@ -22,16 +22,30 @@ dependencies = [
     "reachy-mini[gstreamer]~=1.2.6",
     "requests~=2.32.5",
     "roslibpy~=2.0.0",
-    "scipy~=1.16.3",
     "typer~=0.21.0",
     "websocket-client~=1.9.0",
+]
+
+[project.optional-dependencies]
+audio = [
+    "librosa~=0.11.0"
+]
+mic = [
+    "continuum[audio]",
+    "pvrecorder~=1.2.7",
+    "PyAudio~=0.2.14"
+]
+vad = [
+    "continuum[audio]",
+    "silero-vad~=6.2.0",
+    "pvcobra~=3.0.1",
 ]
 
 [project.scripts]
 continuum = "continuum.continuum:cli"
 
 [tool.poetry]
-packages = [{include = "continuum", from = "src"}]
+packages = [{ include = "continuum", from = "src" }]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -27,8 +27,13 @@ from continuum.utils import none_if_empty, is_empty
 class GoogleLlmClient(ContinuumLlmClient):
     """Google LLM client."""
 
-    def __init__(self, options: GoogleLlmOptions = GoogleLlmOptions()) -> None:
+    def __init__(
+        self,
+        options: GoogleLlmOptions = GoogleLlmOptions(),
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the Google LLM client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
         self._client = genai.Client(api_key=none_if_empty(options.api_key))
@@ -37,7 +42,6 @@ class GoogleLlmClient(ContinuumLlmClient):
     async def execute_request(
         self,
         request: ContinuumLlmRequest,
-        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_GOOGLE
@@ -81,8 +85,8 @@ class GoogleLlmClient(ContinuumLlmClient):
             elif isinstance(chunk, ContentDelta):
                 if chunk.delta.type == "text":  # Could also be "thought"
                     deltas.append(chunk)
-                    if streaming_callback:
-                        streaming_callback(
+                    if self.streaming_callback:
+                        self.streaming_callback(
                             ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=chunk.delta.text)
                         )
             else:

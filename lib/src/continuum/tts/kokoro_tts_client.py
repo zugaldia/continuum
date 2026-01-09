@@ -1,20 +1,18 @@
 import logging
-from io import BytesIO
 from typing import Callable, Generator, Optional, Dict
 
 import numpy
-import soundfile as sf
 import torch
 from kokoro import KPipeline
-from scipy import signal
 
-from continuum.constants import (
-    ERROR_CODE_UNEXPECTED,
+from continuum.audio import (
+    AudioManager,
     DEFAULT_AUDIO_SAMPLE_RATE,
     DEFAULT_AUDIO_CHANNELS,
     DEFAULT_AUDIO_SAMPLE_WIDTH,
-    DEFAULT_AUDIO_FORMAT,
+    AUDIO_FORMAT_PCM,
 )
+from continuum.constants import ERROR_CODE_UNEXPECTED
 from continuum.tts.models import (
     ContinuumTtsResponse,
     ContinuumTtsRequest,
@@ -42,8 +40,13 @@ class KokoroTtsClient(ContinuumTtsClient):
         "zh": "z",  # Chinese (Mandarin)
     }
 
-    def __init__(self, options: KokoroTtsOptions = KokoroTtsOptions()) -> None:
+    def __init__(
+        self,
+        options: KokoroTtsOptions = KokoroTtsOptions(),
+        streaming_callback: Optional[Callable[[ContinuumTtsStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the Kokoro TTS client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._pipelines: Dict[str, KPipeline] = {}
         self._options = options
@@ -71,7 +74,6 @@ class KokoroTtsClient(ContinuumTtsClient):
     async def execute_request(
         self,
         request: ContinuumTtsRequest,
-        streaming_callback: Optional[Callable[[ContinuumTtsStreamingResponse], None]] = None,
     ) -> ContinuumTtsResponse:
         """Generate audio data from text using Kokoro."""
         kokoro_language = self._translate_language_code(request.language)
@@ -93,10 +95,14 @@ class KokoroTtsClient(ContinuumTtsClient):
         audio_data: Optional[bytes] = None
         for chunk_index, (graphemes, phonemes, audio) in enumerate(generator):
             self._logger.debug(f"Chunk {chunk_index}: {graphemes} -> {phonemes}")
-            resampled_audio: numpy.ndarray = self._resample(audio.numpy())
-            buffer = BytesIO()
-            sf.write(buffer, resampled_audio, DEFAULT_AUDIO_SAMPLE_RATE, format="RAW", subtype="PCM_16")
-            audio_data = buffer.getvalue()
+            # Convert torch tensor to numpy and resample using AudioManager
+            audio_numpy: numpy.ndarray = audio.numpy()
+            resampled_audio = AudioManager.resample(audio_numpy, KOKORO_NATIVE_SAMPLE_RATE, DEFAULT_AUDIO_SAMPLE_RATE)
+            # Convert numpy array to bytes using AudioManager
+            audio_bytes_list = AudioManager.to_bytes(
+                resampled_audio, DEFAULT_AUDIO_SAMPLE_WIDTH, DEFAULT_AUDIO_CHANNELS
+            )
+            audio_data = bytes(audio_bytes_list)
             break  # With split_pattern=None, all text is processed as a single chunk
 
         if audio_data is None:
@@ -114,19 +120,13 @@ class KokoroTtsClient(ContinuumTtsClient):
                 is_initial=request.is_initial,
                 is_final=request.is_final,
                 order_id=request.order_id,
-                format=DEFAULT_AUDIO_FORMAT,
+                format=AUDIO_FORMAT_PCM,
                 channels=DEFAULT_AUDIO_CHANNELS,
                 sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
                 sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,
             )
             response.set_audio_bytes(audio_data)
             return response
-
-    @staticmethod
-    def _resample(data: numpy.ndarray) -> numpy.ndarray:
-        # Resample from 24kHz to 16kHz using scipy (3:2 ratio)
-        # Using resample_poly for efficiency with integer ratios
-        return signal.resample_poly(data, up=2, down=3)
 
     def shutdown(self) -> None:
         """Shutdown the TTS client and clean up resources."""

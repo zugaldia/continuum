@@ -27,7 +27,7 @@ class PydanticAgentNode(BaseAgentNode):
         )
 
         try:
-            self._executor = PydanticAgentRunner(options=options)
+            self._executor = PydanticAgentRunner(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"Pydantic agent node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize Pydantic agent node: {e}")

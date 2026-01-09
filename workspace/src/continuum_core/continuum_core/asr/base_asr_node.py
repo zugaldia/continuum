@@ -79,9 +79,7 @@ class BaseAsrNode(QueueNode, ABC):
         finally:
             self.manage_queue(sdk_request)
 
-    def handle_streaming_result(
-        self, streaming_response: ContinuumAsrStreamingResponse, sdk_request: ContinuumAsrRequest
-    ) -> None:
+    def handle_streaming_result(self, streaming_response: ContinuumAsrStreamingResponse) -> None:
         """Handle a streaming result from an ASR request."""
         self.publish_asr_streaming_response(streaming_response)
 

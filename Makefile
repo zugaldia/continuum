@@ -5,7 +5,7 @@
 .PHONY: install-lib install-models uninstall-lib lint format docker-build docker-rebuild docker-clean docker-up docker-down docker-logs
 
 install-lib:
-	cd lib && pip install --break-system-packages -e .
+	cd lib && pip install --break-system-packages -e .[mic,vad]
 
 # Install language models for TTS (kokoro/misaki)
 # Note: For Spanish/French/Hindi/Italian/Portuguese support, also install: sudo apt install espeak-ng

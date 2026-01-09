@@ -6,17 +6,16 @@ arrive in the wrong order, which is typical for streaming LLM responses.
 """
 
 import asyncio
-import io
 import threading
 from collections import deque
 from typing import Callable
 from typing import Optional, Deque
 
-import soundfile as sf
 from pydantic import BaseModel
 from rclpy.timer import Timer
 from reachy_mini import ReachyMini
 
+from continuum.audio import AudioManager, AUDIO_SAMPLE_WIDTH_16BIT
 from continuum_core.reachy.models import ReachyAudio
 from continuum_core.shared.base_node import BaseNode
 
@@ -121,27 +120,21 @@ class ReachySpeaks:
             self._logger.warning("Already speaking.")
             return
 
-        # Convert audio bytes to numpy array using soundfile (raw PCM format)
-        audio_io = io.BytesIO(reachy_audio.audio_data)
-        data, sample_rate_file = sf.read(
-            audio_io,
-            samplerate=reachy_audio.sample_rate,
-            channels=reachy_audio.channels,
-            format="RAW",
-            subtype="PCM_16",
-            dtype="float32",
-        )
+        audio_bytes = list(reachy_audio.audio_data)
+        data = AudioManager.from_bytes(audio_bytes, AUDIO_SAMPLE_WIDTH_16BIT, reachy_audio.channels)
 
-        sample_rate_output = mini.media.get_output_audio_samplerate()  # 16000
-        if sample_rate_file != sample_rate_output:
-            self._logger.warning(f"Sampling mismatch: {sample_rate_file} != {sample_rate_output}.")
-            return
-        if data.ndim > 1:
-            self._logger.warning("Audio is multichannel, mono is expected.")
-            return
+        # Check sample rate compatibility
+        sample_rate = mini.media.get_output_audio_samplerate()  # 16000
+        if reachy_audio.sample_rate != sample_rate:
+            data = AudioManager.resample(data, reachy_audio.sample_rate, sample_rate)
 
-        duration = len(data) / sample_rate_output
-        self._logger.info(f"Playing {duration:.2f} seconds of audio ({len(reachy_audio.audio_data)} bytes)")
+        # Ensure mono audio
+        if reachy_audio.channels > 1:
+            data = AudioManager.to_mono(data)
+
+        # Calculate duration
+        duration = AudioManager.get_duration_in_seconds(data, sample_rate)
+        self._logger.info(f"Playing {duration:.2f} seconds of audio")
 
         self._state.is_speaking = True
         mini.media.start_playing()

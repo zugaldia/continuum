@@ -21,7 +21,31 @@ using the provided [CLI](CLI.md) or [Python client](./lib/src/continuum/client/c
 
 ## Supported Providers
 
-In alphabetic order. 
+In alphabetic order.
+
+### Microphone
+
+The microphone component captures audio input from various sources and streams it for processing by other components
+like VAD and ASR. It provides a unified interface for different audio capture backends, allowing applications to choose
+the most suitable option for their platform and requirements.
+
+| Provider            | Local or Cloud | Notes                                                                              |
+|---------------------|----------------|------------------------------------------------------------------------------------|
+| GStreamer (default) | Local          | Cross-platform multimedia framework with robust audio pipeline support             |
+| Picovoice           | Local          | Cross-platform recorder for real-time speech processing that supports Raspberry Pi |
+| PyAudio             | Local          | Python bindings for PortAudio, providing simple cross-platform audio I/O           |
+
+### VAD (Voice Activity Detection)
+
+VAD detects the presence or absence of human speech in audio streams, enabling applications to distinguish between
+voice and silence or background noise. This is useful for building responsive voice interfaces that know when users
+are speaking and when they've finished.
+
+| Provider          | Local or Cloud | Notes                                                                                 |
+|-------------------|----------------|---------------------------------------------------------------------------------------|
+| Naive             | Local          | Simple RMS threshold-based detection for basic use cases                              |
+| Silero (default)  | Local          | ML-based VAD using deep learning for robust voice activity detection                  |
+| Picovoice         | Cloud          | Commercial service that runs locally but requires connectivity for API key validation |
 
 ### ASR (Automatic Speech Recognition)
 
@@ -29,10 +53,10 @@ ASR converts audio files to text transcriptions using traditional speech-to-text
 capturing what users have said in real-time or transcribing audio content. This approach does not (yet) support speech
 recognition via multimodal LLMs.
 
-| Provider       | Local or Cloud | Notes                                                                             |
-|----------------|----------------|-----------------------------------------------------------------------------------|
-| Faster Whisper | Local          | Fast OpenAI Whisper implementation with the same accuracy while using less memory |
-| OpenAI         | Cloud          | Hosted Whisper and GPT-4o transcription models                                    |
+| Provider                 | Local or Cloud | Notes                                                                             |
+|--------------------------|----------------|-----------------------------------------------------------------------------------|
+| Faster Whisper (default) | Local          | Fast OpenAI Whisper implementation with the same accuracy while using less memory |
+| OpenAI                   | Cloud          | Hosted Whisper and GPT-4o transcription models                                    |
 
 ### LLM (Large Language Model)
 
@@ -40,20 +64,20 @@ LLM support provides traditional text generation from prompts and user input, wi
 when the provider supports it server-side. Advanced functionality like tool calling and MCP integration is handled by
 the agent subsystem described below.
 
-| Provider | Local or Cloud | Notes                                                                              |
-|----------|----------------|------------------------------------------------------------------------------------|
-| Google   | Cloud          | Google Gemini models                                                               |
-| Ollama   | Both           | Traditionally local-only, now also provides cloud-hosted solutions                 |
-| OpenAI   | Both           | OpenAI GPT models. Supports custom base URL for local servers (Ollama, vLLM, etc.) |
+| Provider         | Local or Cloud | Notes                                                                              |
+|------------------|----------------|------------------------------------------------------------------------------------|
+| Google           | Cloud          | Google Gemini models                                                               |
+| Ollama (default) | Both           | Traditionally local-only, now also provides cloud-hosted solutions                 |
+| OpenAI           | Both           | OpenAI GPT models. Supports custom base URL for local servers (Ollama, vLLM, etc.) |
 
 ### TTS (Text-to-Speech)
 
 TTS converts text into audio files using state-of-the-art generative models. We prioritize multilingual providers.
 
-| Provider   | Local or Cloud | Notes                                                                           |
-|------------|----------------|---------------------------------------------------------------------------------|
-| ElevenLabs | Cloud          | High-quality multilingual TTS with natural-sounding voices                      |
-| Kokoro     | Local          | Open-weight multilingual model with competitive performance on TTS leaderboards |
+| Provider          | Local or Cloud | Notes                                                                           |
+|-------------------|----------------|---------------------------------------------------------------------------------|
+| ElevenLabs        | Cloud          | High-quality multilingual TTS with natural-sounding voices                      |
+| Kokoro (default)  | Local          | Open-weight multilingual model with competitive performance on TTS leaderboards |
 
 ### Agents
 
@@ -61,9 +85,9 @@ Agents leverage the full functionality of LLMs with an agentic loop that integra
 tools, user-provided tools, and MCP servers. The LLM typically cycles through multiple iterations to build responses,
 with memory being automatically managed by the agentic framework.
 
-| Provider | Local or Cloud | Notes                                                                                                                                      |
-|----------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| Pydantic | Both           | AI framework from the creators of the popular Python library for data validation. Supports Anthropic, Google, Ollama, and OpenAI providers |
+| Provider           | Local or Cloud | Notes                                                                                                                                      |
+|--------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| Pydantic (default) | Both           | AI framework from the creators of the popular Python library for data validation. Supports Anthropic, Google, Ollama, and OpenAI providers |
 
 ## Design Principles
 

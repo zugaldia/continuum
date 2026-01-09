@@ -27,7 +27,7 @@ class OpenAiAsrNode(BaseAsrNode):
         options = OpenAiAsrOptions(model_name=model_name, api_key=api_key, base_url=base_url)
 
         try:
-            self._executor = OpenAiAsrClient(options=options)
+            self._executor = OpenAiAsrClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"OpenAI ASR node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize OpenAI ASR node: {e}")

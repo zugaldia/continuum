@@ -18,8 +18,13 @@ from continuum.utils import none_if_empty
 class OpenAiAsrClient(ContinuumAsrClient):
     """OpenAI ASR client."""
 
-    def __init__(self, options: OpenAiAsrOptions = OpenAiAsrOptions()) -> None:
+    def __init__(
+        self,
+        options: OpenAiAsrOptions = OpenAiAsrOptions(),
+        streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the OpenAI ASR client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
         self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
@@ -27,14 +32,13 @@ class OpenAiAsrClient(ContinuumAsrClient):
     async def execute_request(
         self,
         request: ContinuumAsrRequest,
-        streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
     ) -> ContinuumAsrResponse:
         """Transcribe audio data to text using OpenAI."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI_ASR
         language = none_if_empty(request.language) or Omit()
         self._logger.info(f"Starting ASR request ({model_name}) for session_id: {request.session_id}")
 
-        audio_buffer = self._create_audio_buffer(request)
+        audio_buffer = request.create_audio_buffer()
         events = self._client.audio.transcriptions.create(
             file=audio_buffer, model=model_name, stream=True, language=language
         )
@@ -44,8 +48,8 @@ class OpenAiAsrClient(ContinuumAsrClient):
             if isinstance(event, TranscriptionTextDoneEvent):
                 done_event = event
             elif isinstance(event, TranscriptionTextDeltaEvent):
-                if streaming_callback:
-                    streaming_callback(
+                if self.streaming_callback:
+                    self.streaming_callback(
                         ContinuumAsrStreamingResponse(session_id=request.session_id, transcription=event.delta)
                     )
             else:
