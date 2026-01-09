@@ -1,0 +1,25 @@
+"""Audio-related constants for the Continuum SDK."""
+
+# Audio format values
+AUDIO_FORMAT_PCM = "pcm"
+
+# Audio channel values
+AUDIO_CHANNELS_MONO = 1
+AUDIO_CHANNELS_STEREO = 2
+
+# Audio sample width values (in bytes)
+AUDIO_SAMPLE_WIDTH_16BIT = 2
+AUDIO_SAMPLE_WIDTH_32BIT = 4
+
+# Audio sample rate values (in Hz)
+AUDIO_SAMPLE_RATE_16KHZ = 16000
+
+# Audio format and parameters
+DEFAULT_AUDIO_FORMAT = AUDIO_FORMAT_PCM
+DEFAULT_AUDIO_CHANNELS = AUDIO_CHANNELS_MONO
+DEFAULT_AUDIO_SAMPLE_WIDTH = AUDIO_SAMPLE_WIDTH_16BIT
+DEFAULT_AUDIO_SAMPLE_RATE = AUDIO_SAMPLE_RATE_16KHZ
+
+# Microphone & VAD
+AUDIO_FRAME_LENGTH_512 = 512  # Preferred by VAD providers (Silero, Picovoice)
+DEFAULT_FRAME_LENGTH = AUDIO_FRAME_LENGTH_512

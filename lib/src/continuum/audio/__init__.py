@@ -1,0 +1,35 @@
+"""Continuum audio utilities module."""
+
+from continuum.audio.audio_io import AudioIO
+from continuum.audio.audio_manager import AudioManager
+from continuum.audio.constants import (
+    AUDIO_FORMAT_PCM,
+    AUDIO_CHANNELS_MONO,
+    AUDIO_CHANNELS_STEREO,
+    AUDIO_SAMPLE_WIDTH_16BIT,
+    AUDIO_SAMPLE_WIDTH_32BIT,
+    AUDIO_SAMPLE_RATE_16KHZ,
+    DEFAULT_AUDIO_FORMAT,
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_AUDIO_SAMPLE_WIDTH,
+    DEFAULT_AUDIO_SAMPLE_RATE,
+    AUDIO_FRAME_LENGTH_512,
+    DEFAULT_FRAME_LENGTH,
+)
+
+__all__ = [
+    "AudioIO",
+    "AudioManager",
+    "AUDIO_FORMAT_PCM",
+    "AUDIO_CHANNELS_MONO",
+    "AUDIO_CHANNELS_STEREO",
+    "AUDIO_SAMPLE_WIDTH_16BIT",
+    "AUDIO_SAMPLE_WIDTH_32BIT",
+    "AUDIO_SAMPLE_RATE_16KHZ",
+    "DEFAULT_AUDIO_FORMAT",
+    "DEFAULT_AUDIO_CHANNELS",
+    "DEFAULT_AUDIO_SAMPLE_WIDTH",
+    "DEFAULT_AUDIO_SAMPLE_RATE",
+    "AUDIO_FRAME_LENGTH_512",
+    "DEFAULT_FRAME_LENGTH",
+]
