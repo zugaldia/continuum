@@ -20,6 +20,19 @@
     # joystick changes.
     autorepeat_rate: 0.0
 
+# Naive VAD node
+/continuum/vad/naive/naive_vad:
+  ros__parameters:
+    rms_threshold: 0.1
+
+# Picovoice VAD node
+/continuum/vad/picovoice/picovoice_vad:
+  ros__parameters:
+    api_key: ""
+    device: ""
+    library_path: ""
+    probability_threshold: 0.8
+
 # FasterWhisper ASR node
 /continuum/asr/fasterwhisper/fasterwhisper_asr:
   ros__parameters:
@@ -93,6 +106,8 @@
 # Reachy
 /continuum/hardware/reachy/reachy:
   ros__parameters:
+    enable_vad: false
+    vad_node: "silero"
     asr_node: "fasterwhisper"
     agent_node: "pydantic"
     tts_node: "kokoro"
