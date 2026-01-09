@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from continuum.constants import (
+from continuum.audio import (
     DEFAULT_AUDIO_CHANNELS,
     DEFAULT_AUDIO_SAMPLE_RATE,
     DEFAULT_AUDIO_SAMPLE_WIDTH,
@@ -13,6 +13,7 @@ from continuum.utils import generate_order_id
 class ReachyState(BaseModel):
     """Tracks the state for Reachy."""
 
+    vad_session_id: Optional[str] = None  # Persistent session for VAD while connected
     active_session_id: Optional[str] = None
     state_id: Optional[str] = None  # Agent memory
     request_timestamp: Optional[int] = None  # Timestamp from the initial ASR request (nanoseconds)

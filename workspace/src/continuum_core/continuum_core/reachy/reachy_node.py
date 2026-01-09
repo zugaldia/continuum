@@ -1,12 +1,12 @@
 from typing import Optional
 
 import rclpy
-import soundfile as sf
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import ExternalShutdownException
 from rclpy.publisher import Publisher
 from reachy_mini import ReachyMini
 
+from continuum.audio import AUDIO_FORMAT_PCM
 from continuum.constants import (
     QOS_DEPTH_DEFAULT,
     CONTINUUM_NAMESPACE,
@@ -19,8 +19,13 @@ from continuum.constants import (
     PARAM_TTS_NODE_DEFAULT,
     PARAM_AGENT_NODE,
     PARAM_AGENT_NODE_DEFAULT,
+    PARAM_VAD_NODE,
+    PARAM_VAD_NODE_DEFAULT,
+    PARAM_ENABLE_VAD,
+    PARAM_ENABLE_VAD_DEFAULT,
     PATH_ASR,
     PATH_TTS,
+    PATH_VAD,
     TOPIC_AGENT_REQUEST,
     TOPIC_ASR_REQUEST,
     TOPIC_ASR_RESPONSE,
@@ -28,14 +33,14 @@ from continuum.constants import (
     TOPIC_TTS_RESPONSE,
     TOPIC_AGENT_RESPONSE,
     TOPIC_AGENT_STREAMING_RESPONSE,
+    TOPIC_VAD_REQUEST,
+    TOPIC_VAD_RESPONSE,
+    TOPIC_VAD_STREAMING_RESPONSE,
     ERROR_CODE_SUCCESS,
-    DEFAULT_AUDIO_CHANNELS,
-    DEFAULT_AUDIO_SAMPLE_RATE,
-    DEFAULT_AUDIO_SAMPLE_WIDTH,
-    DEFAULT_AUDIO_FORMAT,
     PATH_HARDWARE,
 )
 from continuum.models import JoystickAxis, JoystickButton
+from continuum.audio import AudioIO
 from continuum.utils import (
     generate_unique_id,
     none_if_empty,
@@ -43,7 +48,9 @@ from continuum.utils import (
     is_empty,
     generate_order_id,
     compute_elapsed_ms,
+    create_timestamped_filename,
 )
+from continuum.vad.models import VadEvent
 from continuum_core.reachy.models import ReachyAudio, ReachyState
 from continuum_core.reachy.reachy_listens import ReachyListens
 from continuum_core.reachy.reachy_moves import ReachyMoves
@@ -56,10 +63,13 @@ from continuum_interfaces.msg import (
     AsrRequest,
     TtsRequest,
     AgentRequest,
+    VadRequest,
     AsrResponse,
     TtsResponse,
     AgentResponse,
     AgentStreamingResponse,
+    VadResponse,
+    VadStreamingResponse,
 )
 
 # Connection configuration
@@ -67,12 +77,15 @@ REACHY_CONNECTION_RETRIES = 3
 
 
 class ReachyNode(AsyncNode):
+    _vad_publisher: Publisher[VadRequest]
     _asr_publisher: Publisher[AsrRequest]
     _tts_publisher: Publisher[TtsRequest]
     _agent_publisher: Publisher[AgentRequest]
+    _vad_node: str
     _asr_node: str
     _tts_node: str
     _agent_node: str
+    _enable_vad: bool
 
     def __init__(self) -> None:
         super().__init__("reachy_node")
@@ -81,19 +94,13 @@ class ReachyNode(AsyncNode):
         self._mini: Optional[ReachyMini] = None
 
         self._reachy_moves = ReachyMoves(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
-        self._reachy_listens = ReachyListens(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
+        self._reachy_listens = ReachyListens(
+            node=self, core_loop=self._core_loop, get_mini=self._get_mini, on_audio_sample=self._on_audio_sample
+        )
         self._reachy_sees = ReachySees(node=self, core_loop=self._core_loop, get_mini=self._get_mini)
         self._reachy_speaks = ReachySpeaks(
             node=self, core_loop=self._core_loop, get_mini=self._get_mini, on_queue_empty=self._on_tts_queue_empty
         )
-
-        if self.debug_mode:
-            for emotion_id in self._reachy_moves.recorded_emotions.list_moves():
-                description = self._reachy_moves.recorded_emotions.get(emotion_id).description
-                self.get_logger().info(f"- Emotion: {emotion_id}: {description}")
-            for dance_id in self._reachy_moves.recorded_dances.list_moves():
-                description = self._reachy_moves.recorded_dances.get(dance_id).description
-                self.get_logger().info(f"- Dance: {dance_id}: {description}")
 
         self.get_logger().info(f"Reachy node initialized ({self.storage_path}).")
 
@@ -105,6 +112,12 @@ class ReachyNode(AsyncNode):
         """Register the dictation app parameters."""
         super().register_parameters()
         self.declare_parameter(
+            PARAM_ENABLE_VAD, PARAM_ENABLE_VAD_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)
+        )
+        self.declare_parameter(
+            PARAM_VAD_NODE, PARAM_VAD_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.declare_parameter(
             PARAM_ASR_NODE, PARAM_ASR_NODE_DEFAULT, ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         self.declare_parameter(
@@ -115,11 +128,17 @@ class ReachyNode(AsyncNode):
         )
 
         # Set node names before registering any publishers/subscribers
+        self._enable_vad = self._get_bool_param(PARAM_ENABLE_VAD)
+        self._vad_node = self._get_str_param(PARAM_VAD_NODE)
         self._asr_node = self._get_str_param(PARAM_ASR_NODE)
         self._tts_node = self._get_str_param(PARAM_TTS_NODE)
         self._agent_node = self._get_str_param(PARAM_AGENT_NODE)
 
     def register_publishers(self) -> None:
+        # Ability to issue VAD requests
+        topic_vad_request = f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{self._vad_node}/{TOPIC_VAD_REQUEST}"
+        self._vad_publisher = self.create_publisher(VadRequest, topic_vad_request, QOS_DEPTH_DEFAULT)
+
         # Ability to issue ASR requests
         topic_asr_request = f"/{CONTINUUM_NAMESPACE}/{PATH_ASR}/{self._asr_node}/{TOPIC_ASR_REQUEST}"
         self._asr_publisher = self.create_publisher(AsrRequest, topic_asr_request, QOS_DEPTH_DEFAULT)
@@ -145,6 +164,18 @@ class ReachyNode(AsyncNode):
             f"/{CONTINUUM_NAMESPACE}/{PATH_INPUT}/{TOPIC_JOYSTICK_AXIS_EVENT}",
             self._joystick_axis_callback,
             QOS_DEPTH_DEFAULT,
+        )
+
+        # Listen to VAD responses
+        topic_vad_response = f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{self._vad_node}/{TOPIC_VAD_RESPONSE}"
+        self.create_subscription(VadResponse, topic_vad_response, self._on_vad_response, QOS_DEPTH_DEFAULT)
+
+        # Listen to VAD streaming responses
+        topic_vad_streaming_response = (
+            f"/{CONTINUUM_NAMESPACE}/{PATH_VAD}/{self._vad_node}/{TOPIC_VAD_STREAMING_RESPONSE}"
+        )
+        self.create_subscription(
+            VadStreamingResponse, topic_vad_streaming_response, self._on_vad_streaming_response, QOS_DEPTH_DEFAULT
         )
 
         # Listen to ASR responses
@@ -178,6 +209,7 @@ class ReachyNode(AsyncNode):
                 self.get_logger().info(f"Connecting to Reachy Mini (attempt {attempt}/{REACHY_CONNECTION_RETRIES}).")
                 self._mini = ReachyMini(connection_mode="network")
                 self.get_logger().info("Reachy Mini connected.")
+                self._state.vad_session_id = generate_unique_id()
                 self._reachy_listens.start_listening_timer()
                 self._reachy_moves.start_movement_timer()
                 return
@@ -194,6 +226,7 @@ class ReachyNode(AsyncNode):
         self._reachy_listens.stop_listening_timer()
         self._reachy_moves.stop_movement_timer()
         self._reachy_speaks.clear_audio_queue()
+        self._state.vad_session_id = None
 
         if not self._mini:
             self.get_logger().warning("Reachy Mini not connected.")
@@ -221,18 +254,27 @@ class ReachyNode(AsyncNode):
             if reachy_audio:
                 self._state.active_session_id = generate_unique_id()
                 self._reachy_speaks.clear_audio_queue()
+                output_path = create_timestamped_filename("reachy", "wav", self.storage_path)
+                AudioIO.save_wav_file(
+                    audio_data=reachy_audio.audio_data,
+                    output_path=output_path,
+                    sample_rate=reachy_audio.sample_rate,
+                    channels=reachy_audio.channels,
+                    sample_width=reachy_audio.sample_width,
+                )
 
                 asr_request = AsrRequest(
                     session_id=self._state.active_session_id,
                     audio_data=list(reachy_audio.audio_data),
-                    format=DEFAULT_AUDIO_FORMAT,
+                    format=AUDIO_FORMAT_PCM,
                     channels=reachy_audio.channels,
                     sample_rate=reachy_audio.sample_rate,
                     sample_width=reachy_audio.sample_width,
                     language="en",
                 )
+
                 self._state.request_timestamp = asr_request.timestamp
-                self.get_logger().info(f"Recording stopped, starting ASR for session {self._state.active_session_id}")
+                self.get_logger().info(f"Recording stopped, audio saved: {output_path}")
                 self._asr_publisher.publish(asr_request)
 
     def _joystick_axis_callback(self, msg: JoystickAxisEvent) -> None:
@@ -244,6 +286,37 @@ class ReachyNode(AsyncNode):
             self._reachy_sees.take_photo()
         elif msg.axis == JoystickAxis.AXIS_DOWN.value:
             self._play_test_audio()
+
+    def _on_audio_sample(self, sample: ReachyAudio) -> None:
+        """Called when a new audio sample is received from Reachy Mini."""
+        if not self._enable_vad:
+            return
+
+        self._vad_publisher.publish(
+            VadRequest(
+                session_id=self._state.vad_session_id,
+                audio_data=list(sample.audio_data),
+                sample_rate=sample.sample_rate,
+                channels=sample.channels,
+                sample_width=sample.sample_width,
+                format=AUDIO_FORMAT_PCM,
+            )
+        )
+
+    def _on_vad_response(self, msg: VadResponse) -> None:
+        """Callback for VAD responses."""
+        if msg.session_id != self._state.vad_session_id:
+            return  # Ignore all responses but ours
+        if msg.error_code != ERROR_CODE_SUCCESS:
+            self.get_logger().error(f"VAD error: {msg.error_message}")
+
+    def _on_vad_streaming_response(self, msg: VadStreamingResponse) -> None:
+        """Callback for VAD streaming responses."""
+        if msg.session_id != self._state.vad_session_id:
+            return  # Ignore all responses but ours
+        if msg.event == VadEvent.SPEECH_START:
+            self.get_logger().info("Speech detected.")
+            self._reachy_moves.do_random_emotion()
 
     def _on_asr_response(self, msg: AsrResponse) -> None:
         if msg.session_id != self._state.active_session_id:
@@ -390,15 +463,15 @@ class ReachyNode(AsyncNode):
                 )
                 return
 
-            audio_data, _ = sf.read(test_path, dtype="int16")
-            test_audio_data = audio_data.tobytes()
+            # Load WAV file using utility function
+            test_audio_data, sample_rate, channels, sample_width = AudioIO.load_wav_file(test_path)
             self._reachy_speaks.clear_audio_queue()
             self._reachy_speaks.queue_audio(
                 ReachyAudio(
                     audio_data=test_audio_data,
-                    sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
-                    channels=DEFAULT_AUDIO_CHANNELS,
-                    sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,
+                    sample_rate=sample_rate,
+                    channels=channels,
+                    sample_width=sample_width,
                     is_initial=True,
                 )
             )
