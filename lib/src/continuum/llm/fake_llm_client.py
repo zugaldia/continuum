@@ -18,8 +18,13 @@ FAKE_RESPONSE = "You are absolutely right!"
 class FakeLlmClient(ContinuumLlmClient):
     """Fake LLM client for testing purposes."""
 
-    def __init__(self, options: FakeLlmOptions = FakeLlmOptions()) -> None:
+    def __init__(
+        self,
+        options: FakeLlmOptions = FakeLlmOptions(),
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the fake LLM client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
         self._logger.info("Fake LLM client initialized.")
@@ -27,7 +32,6 @@ class FakeLlmClient(ContinuumLlmClient):
     async def execute_request(
         self,
         request: ContinuumLlmRequest,
-        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response."""
         self._logger.info(f"Starting LLM request for session_id: {request.session_id}")
@@ -41,9 +45,9 @@ class FakeLlmClient(ContinuumLlmClient):
         words = FAKE_RESPONSE.split()
         for i, word in enumerate(words):
             await asyncio.sleep(self._options.streaming_delay_seconds)  # Simulate token-by-token processing delay
-            if streaming_callback:
+            if self.streaming_callback:
                 self._logger.debug(f"Intermediate result for session_id: {request.session_id}: {word}")
-                streaming_callback(ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=word))
+                self.streaming_callback(ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=word))
 
         # Return final response
         response = ContinuumLlmResponse(session_id=request.session_id, content_text=FAKE_RESPONSE, done_reason="tired")

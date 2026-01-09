@@ -30,8 +30,13 @@ from continuum.utils import none_if_empty, is_empty
 class OpenAiLlmClient(ContinuumLlmClient):
     """OpenAI LLM client."""
 
-    def __init__(self, options: OpenAiLlmOptions = OpenAiLlmOptions()) -> None:
+    def __init__(
+        self,
+        options: OpenAiLlmOptions = OpenAiLlmOptions(),
+        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the OpenAI LLM client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
         self._client = OpenAI(api_key=none_if_empty(options.api_key), base_url=none_if_empty(options.base_url))
@@ -40,7 +45,6 @@ class OpenAiLlmClient(ContinuumLlmClient):
     async def execute_request(
         self,
         request: ContinuumLlmRequest,
-        streaming_callback: Optional[Callable[[ContinuumLlmStreamingResponse], None]] = None,
     ) -> ContinuumLlmResponse:
         """Execute LLM request and return response with streaming support."""
         model_name = none_if_empty(self._options.model_name) or DEFAULT_MODEL_NAME_OPENAI
@@ -92,8 +96,8 @@ class OpenAiLlmClient(ContinuumLlmClient):
                 self._logger.info("-> ResponseOutputItemDoneEvent")
             # Emitted when there is an additional text delta.
             elif isinstance(event, ResponseTextDeltaEvent):
-                if streaming_callback:
-                    streaming_callback(
+                if self.streaming_callback:
+                    self.streaming_callback(
                         ContinuumLlmStreamingResponse(session_id=request.session_id, content_text=event.delta)
                     )
             # Emitted when text content is finalized.

@@ -21,7 +21,7 @@ class GoogleLlmNode(BaseLlmNode):
         options = GoogleLlmOptions(api_key=api_key, model_name=model_name)
 
         try:
-            self._executor = GoogleLlmClient(options=options)
+            self._executor = GoogleLlmClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"Google LLM node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize Google LLM node: {e}")

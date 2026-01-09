@@ -18,8 +18,13 @@ from continuum.utils import none_if_empty
 class FasterWhisperAsrClient(ContinuumAsrClient):
     """Faster Whisper ASR (Automatic Speech Recognition) client."""
 
-    def __init__(self, options: FasterWhisperAsrOptions = FasterWhisperAsrOptions()) -> None:
+    def __init__(
+        self,
+        options: FasterWhisperAsrOptions = FasterWhisperAsrOptions(),
+        streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the Faster Whisper ASR client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
 
         model_name = none_if_empty(options.model_name) or DEFAULT_MODEL_NAME_FASTERWHISPER
@@ -39,10 +44,9 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
     async def execute_request(
         self,
         request: ContinuumAsrRequest,
-        streaming_callback: Optional[Callable[[ContinuumAsrStreamingResponse], None]] = None,
     ) -> ContinuumAsrResponse:
         """Transcribe audio data to text using Faster Whisper."""
-        audio_buffer = self._create_audio_buffer(request)
+        audio_buffer = request.create_audio_buffer()
         segments: Iterable[Segment]
         info: TranscriptionInfo
         segments, info = self._model.transcribe(audio=audio_buffer, language=none_if_empty(request.language))
@@ -51,8 +55,8 @@ class FasterWhisperAsrClient(ContinuumAsrClient):
         outputs: List[Segment] = []
         for segment in segments:
             outputs.append(segment)
-            if streaming_callback:
-                streaming_callback(
+            if self.streaming_callback:
+                self.streaming_callback(
                     ContinuumAsrStreamingResponse(session_id=request.session_id, transcription=segment.text)
                 )
 

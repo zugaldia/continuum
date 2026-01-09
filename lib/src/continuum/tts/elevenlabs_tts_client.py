@@ -4,11 +4,11 @@ from typing import Callable, Optional
 
 from elevenlabs.client import ElevenLabs, OMIT
 
-from continuum.constants import (
+from continuum.audio import (
     DEFAULT_AUDIO_SAMPLE_RATE,
     DEFAULT_AUDIO_CHANNELS,
     DEFAULT_AUDIO_SAMPLE_WIDTH,
-    DEFAULT_AUDIO_FORMAT,
+    AUDIO_FORMAT_PCM,
 )
 from continuum.tts.models import (
     ContinuumTtsResponse,
@@ -23,8 +23,13 @@ from continuum.utils import none_if_empty
 class ElevenLabsTtsClient(ContinuumTtsClient):
     """ElevenLabs TTS client."""
 
-    def __init__(self, options: ElevenLabsTtsOptions = ElevenLabsTtsOptions()) -> None:
+    def __init__(
+        self,
+        options: ElevenLabsTtsOptions = ElevenLabsTtsOptions(),
+        streaming_callback: Optional[Callable[[ContinuumTtsStreamingResponse], None]] = None,
+    ) -> None:
         """Initialize the ElevenLabs TTS client."""
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._client = ElevenLabs(api_key=options.api_key)
         self._options = options
@@ -32,7 +37,6 @@ class ElevenLabsTtsClient(ContinuumTtsClient):
     async def execute_request(
         self,
         request: ContinuumTtsRequest,
-        streaming_callback: Optional[Callable[[ContinuumTtsStreamingResponse], None]] = None,
     ) -> ContinuumTtsResponse:
         """Generate audio data from text using ElevenLabs."""
         language = none_if_empty(request.language) or OMIT
@@ -57,7 +61,7 @@ class ElevenLabsTtsClient(ContinuumTtsClient):
             is_initial=request.is_initial,
             is_final=request.is_final,
             order_id=request.order_id,
-            format=DEFAULT_AUDIO_FORMAT,
+            format=AUDIO_FORMAT_PCM,
             channels=DEFAULT_AUDIO_CHANNELS,
             sample_rate=DEFAULT_AUDIO_SAMPLE_RATE,
             sample_width=DEFAULT_AUDIO_SAMPLE_WIDTH,

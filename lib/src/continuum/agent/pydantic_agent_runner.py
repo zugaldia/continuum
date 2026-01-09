@@ -39,7 +39,12 @@ from continuum.utils import is_empty, none_if_empty
 
 
 class PydanticAgentRunner(AgentRunner):
-    def __init__(self, options: PydanticAgentOptions):
+    def __init__(
+        self,
+        options: PydanticAgentOptions,
+        streaming_callback: Optional[Callable[[ContinuumAgentStreamingResponse], None]] = None,
+    ):
+        super().__init__(streaming_callback)
         self._logger = logging.getLogger(__name__)
         self._options = options
 
@@ -114,7 +119,6 @@ class PydanticAgentRunner(AgentRunner):
     async def execute_request(
         self,
         request: ContinuumAgentRequest,
-        streaming_callback: Optional[Callable[[ContinuumAgentStreamingResponse], None]] = None,
     ) -> ContinuumAgentResponse:
         async def event_stream_handler(ctx: RunContext, event_stream: AsyncIterable[AgentStreamEvent]):
             async for event in event_stream:

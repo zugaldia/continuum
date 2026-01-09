@@ -31,7 +31,7 @@ class ElevenLabsTtsNode(BaseTtsNode):
         )
 
         try:
-            self._executor = ElevenLabsTtsClient(options=options)
+            self._executor = ElevenLabsTtsClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"ElevenLabs TTS node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize ElevenLabs TTS node: {e}")

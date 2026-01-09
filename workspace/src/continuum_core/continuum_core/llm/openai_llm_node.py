@@ -27,7 +27,7 @@ class OpenAILlmNode(BaseLlmNode):
         options = OpenAiLlmOptions(api_key=api_key, base_url=base_url, model_name=model_name)
 
         try:
-            self._executor = OpenAiLlmClient(options=options)
+            self._executor = OpenAiLlmClient(options=options, streaming_callback=self.handle_streaming_result)
             self.get_logger().info(f"OpenAI LLM node initialized: {options}")
         except Exception as e:
             self.get_logger().error(f"Failed to initialize OpenAI LLM node: {e}")
