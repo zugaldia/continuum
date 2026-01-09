@@ -30,6 +30,7 @@ standard WebSocket server, allowing you to access it with the provided Python SD
 
 2. Install the Continuum Python SDK. This SDK provides a WebSocket client for high-level access to the system and
 includes the necessary dependencies to interact with all third-party services (i.e., Ollama, OpenAI, Kokoro...).
+VAD (Voice Activity Detection) support is included by default.
 
 ```bash
 git clone git@github.com:zugaldia/continuum.git

@@ -51,9 +51,9 @@ ENV GST_PLUGIN_PATH=/opt/gst-plugins-rs/lib/x86_64-linux-gnu:${GST_PLUGIN_PATH}
 COPY lib/pyproject.toml lib/README.md /app/lib/
 COPY lib/src/ /app/lib/src/
 
-# Install Python library
+# Install Python library with VAD support
 WORKDIR /app/lib
-RUN pip install --no-cache-dir --break-system-packages --ignore-installed .
+RUN pip install --no-cache-dir --break-system-packages --ignore-installed .[vad]
 
 # Download spacy language model (Kokoro) + delete pip cache
 RUN python3 -m spacy download en_core_web_sm --break-system-packages && \

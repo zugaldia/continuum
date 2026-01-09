@@ -12,7 +12,7 @@ and cloud options.
 
 ### Root-level commands (from project root)
 ```bash
-make install-lib          # Install Python SDK (editable mode)
+make install-lib          # Install Python SDK with VAD support (editable mode)
 make uninstall-lib        # Uninstall Python SDK
 make lint                 # Run linting on both lib/ and workspace/
 make format               # Format code in both lib/ and workspace/
@@ -49,7 +49,7 @@ continuum ws echo|asr|llm|tts|agent|dictation    # WebSocket commands
 This project is a monorepo with two main components:
 
 1. **lib/** - Python SDK (`continuum` package)
-   - Provider implementations for ASR/LLM/TTS (local invocation without ROS)
+   - Provider implementations for ASR/LLM/TTS/VAD (local invocation without ROS)
    - WebSocket client for connecting to ROS bridge
    - CLI tool
    - Shared constants and models

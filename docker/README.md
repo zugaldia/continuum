@@ -14,7 +14,7 @@ Docker to help optimize and reduce the image size.
 
 The Docker container includes:
 - ROS 2 Kilted
-- Continuum Python SDK with all dependencies
+- Continuum Python SDK with all dependencies (including VAD support)
 - Pre-built ROS workspace with all Continuum nodes
 - ROS bridge server for WebSocket connectivity (port 9090)
 
