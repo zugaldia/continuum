@@ -7,8 +7,8 @@ import typer
 
 from continuum.asr import ContinuumAsrClient, FakeAsrClient, FasterWhisperAsrClient, OpenAiAsrClient
 from continuum.asr.models import ContinuumAsrRequest, ContinuumAsrStreamingResponse
-from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_OPENAI, DEFAULT_AUDIO_FORMAT
-from continuum.utils import load_wav_file
+from continuum.audio import AUDIO_FORMAT_PCM, AudioIO
+from continuum.constants import NODE_ASR_FAKE, NODE_ASR_FASTERWHISPER, NODE_ASR_OPENAI
 
 
 def asr_command(
@@ -23,32 +23,32 @@ def asr_command(
 
     typer.echo(f"Transcribing {audio_file} using {provider} provider...")
 
+    def streaming_callback(streaming_response: ContinuumAsrStreamingResponse) -> None:
+        """Callback to display streaming responses."""
+        typer.echo(streaming_response.transcription)
+
     client: ContinuumAsrClient
     if provider == NODE_ASR_FAKE:
-        client = FakeAsrClient()
+        client = FakeAsrClient(streaming_callback=streaming_callback)
     elif provider == NODE_ASR_FASTERWHISPER:
-        client = FasterWhisperAsrClient()
+        client = FasterWhisperAsrClient(streaming_callback=streaming_callback)
     elif provider == NODE_ASR_OPENAI:
-        client = OpenAiAsrClient()
+        client = OpenAiAsrClient(streaming_callback=streaming_callback)
     else:
         typer.echo(f"Error: Unknown provider: {provider}", err=True)
         raise typer.Exit(code=1)
 
     # Load audio file and populate audio_data
-    audio_data, sample_rate, channels, sample_width = load_wav_file(audio_file)
+    audio_data, sample_rate, channels, sample_width = AudioIO.load_wav_file(audio_file)
     request = ContinuumAsrRequest(language=language)
     request.set_audio_bytes(audio_data)
     request.sample_rate = sample_rate
     request.channels = channels
     request.sample_width = sample_width
-    request.format = DEFAULT_AUDIO_FORMAT
-
-    def streaming_callback(streaming_response: ContinuumAsrStreamingResponse) -> None:
-        """Callback to display streaming responses."""
-        typer.echo(streaming_response.transcription)
+    request.format = AUDIO_FORMAT_PCM
 
     try:
-        response = asyncio.run(client.execute_request(request, streaming_callback=streaming_callback))
+        response = asyncio.run(client.execute_request(request))
         typer.echo(f"\nFinal response: {response}")
     except Exception as e:
         typer.echo(f"Error during transcription: {e}", err=True)
